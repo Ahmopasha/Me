@@ -14546,7 +14546,11 @@ yazarak "Positional Placeholder" mekanizmasını işletebiliriz. Şöyleki:
 
             std::string str;
             for (char c = 'A'; c <= 'Z'; ++c) {
-                std::format_to(std::back_inserter(str), "{{{0}, {0:d}}}\n", c);
+                std::format_to(
+                    std::back_inserter(str),
+                    "{{{0}, {0:d}}}\n",
+                    c
+                );
             }
             std::cout << str << '\n';
         }
