@@ -14523,7 +14523,7 @@ yazarak "Positional Placeholder" mekanizmasını işletebiliriz. Şöyleki:
         }
 
     * Örnek 3,
-        <pre>
+        {% raw %}
         #include <format>
         #include <string>
         #include <iostream>
@@ -14555,7 +14555,7 @@ yazarak "Positional Placeholder" mekanizmasını işletebiliriz. Şöyleki:
             }
             std::cout << str << '\n';
         }
-        </pre>
+        {% endraw %}
 
 Şimdi de "local" bilgisini değiştirerek uygun dillerde metin yazdırabiliriz. 
     * Örnek 1,
