@@ -9392,7 +9392,11 @@ C'de Çok Boyutlu Diziler ile çalışırken şu noktalara da dikkat etmeliyiz:
 
             int main(void)
             {
-                int a[3][2] = {{1, 2}, {3, 4}, {5, 6}};
+                int a[3][2] = {
+                    {1, 2},
+                    {3, 4},
+                    {5, 6}
+                };
 
                 disp_matrix(a, 3, 2);
 
@@ -27245,8 +27249,15 @@ Buradaki,
                         {
                             HPQUEUE hpqueue;
                             int prios[] = {100, 85, 90, 60, 70, 10, 40, -1};
-                            VALUETYPE values[] = {{"Ali Serce"}, {"Sacit Bulut"}, {"Ayse Er"}, {"Necati Ergin"}, {"Guray Sonmez"},
-                                {"Ziya Taskent"}, {"Gencay Coskun"}};
+                            VALUETYPE values[] = {
+                                {"Ali Serce"},
+                                {"Sacit Bulut"},
+                                {"Ayse Er"},
+                                {"Necati Ergin"},
+                                {"Guray Sonmez"},
+                                {"Ziya Taskent"},
+                                {"Gencay Coskun"}
+                            };
                             int prio;
                             VALUETYPE value;
 
