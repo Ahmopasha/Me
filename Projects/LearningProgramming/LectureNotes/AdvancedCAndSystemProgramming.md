@@ -9161,7 +9161,11 @@ C'de Çok Boyutlu Diziler ile çalışırken şu noktalara da dikkat etmeliyiz:
 
     >> 	Biz C'de çok boyutlu dizilerin elemanlarına birden fazla [...]  ile erişiriz. Bunun neden böyle olduğu açıktır. Örneğin:
 
-	    int a[3][2] = {{1, 2}, {3, 4}, {5, 6}};
+	    int a[3][2] = {
+            {1, 2}, 
+            {3, 4},
+            {5, 6}
+        };
 
 	Burada a[i] aslında a matrisinin i'inci satırındaki diziyi belirtmektedir. O halde a[i][k] ifadesi de aslında a matrisinin i'inci
     satırındaki dizinin k'ıncı sütunundaki eleman anlamına gelmektedir. Aşağıda bu konuya ilişkin bir örnek verilmiştir: 
