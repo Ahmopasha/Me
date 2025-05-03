@@ -8822,12 +8822,13 @@ kullanmaktadır.
 				
 				if (symlink(argv[1], argv[2]) == -1) exit_sys("link");
 				
-				char buffer[PATH_MAX_II] = "xxxxxXXXXXxxxxxXXXXX"; printf("{%s}\n", buffer);
+				char buffer[PATH_MAX_II] = "xxxxxXXXXXxxxxxXXXXX";
+				printf("%s\n", buffer);
 				ssize_t result;
 				if ( (result = readlink(argv[2], buffer, PATH_MAX_II)) == -1 ) exit_sys("readlink");
 				
 				printf("[%lld] => ", (long long)result);
-				printf("{%s}\n", buffer);
+				printf("%s\n", buffer);
 				
 				return 0;
 			}
@@ -8874,7 +8875,8 @@ kullanmaktadır.
 				
 				if (symlink(argv[1], argv[2]) == -1) exit_sys("link");
 				
-				char buffer[PATH_MAX_II + 1] = "xxxxxXXXXXxxxxxXXXXX"; printf("{%s}\n", buffer);
+				char buffer[PATH_MAX_II + 1] = "xxxxxXXXXXxxxxxXXXXX";
+				printf("%s\n", buffer);
 				ssize_t result;
 				if ( (result = readlink(argv[2], buffer, PATH_MAX_II)) == -1 ) exit_sys("readlink");
 				
@@ -8883,7 +8885,7 @@ kullanmaktadır.
 				{
 					buffer[result] = '\0';
 					printf("[%lld] => ", (long long)result);
-					printf("{%s}\n", buffer);
+					printf("%s\n", buffer);
 				}
 				else
 				{
@@ -8906,7 +8908,7 @@ kullanmaktadır.
 				
 				// Approach - III
 				printf("[%lld] => ", (long long)result);
-				printf("{%.*s}\n", (int)result, buffer);
+				printf("%.*s\n", (int)result, buffer);
 				
 				return 0;
 			}
