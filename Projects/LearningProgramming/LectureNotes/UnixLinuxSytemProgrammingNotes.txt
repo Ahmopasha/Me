@@ -168,7 +168,7 @@
 		"./sample -ab ali"
 	
 	>> Belirli bir dönemden sonra Uzun Seçenek terimi de bu stile dahil edildi. Birden fazla karakter içeren seçenekler Uzun Seçenek
-	olarak geçmektedir.	Bu tip seçenekleri kullanmak için "-" karakteri yerine "--" karakterini kullanmalıyız. Örneğin, "--ali"
+	olarak geçmektedir. Bu tip seçenekleri kullanmak için "-" karakteri yerine "--" karakterini kullanmalıyız. Örneğin, "--ali"
 	seçeneğinde "ali" seçeneğin kendi ismidir. Uzun Seçenekler ise kendi bünyesinde üçe ayrılmaktadır. Bunlar,
 		>>> Argümansız Seçenekler (Options without an Argument) : "./sample --wrap" komutunu ele aldığımızda, buradaki "--wrap" seçeneği
 		argümansız seçenektir. 
@@ -26256,7 +26256,9 @@ bütün sayfalarını "unlock" edebiliriz.
 		Şimdi bu noktada dikkat etmemiz gereken bir nokta vardır: Hiç bir "thread", yukarıdaki "exit", "_exit" veya "pthread_exit"
 		fonksiyonlarından birini henüz çağırmamışken "main-thrad" in akışı "main" fonksiyonunun sonuna gelirse, otomatik olarak 
 		"exit" fonksiyonu çağrılacağı için, yine bütün "thread" ler sonlanacaktır. Fakat bu demek değildir ki "main-thread" bittiğinde 
-		proses komple sonlanacaktır. Buradaki kilit nokta, "exit" çağrıldığı için prosesin sonlanmasıdır.
+		proses komple sonlanacaktır. Buradaki kilit nokta, "exit" çağrıldığı için prosesin sonlanmasıdır. Dolayısıyla diyebiliriz ki 
+		eğer "main-thread", "pthread_exit" çağrısı yaparsa, o prosesin diğer "thread" leri SONLANMAZ. YALNIZCA "main-thread" SONLANIR.
+		Diğerleri devam eder. 
 			* Örnek 1, Aşağıdaki programda sonradan oluşturulan "thread" in elliye kadar sayması beklenirken "main-thread" in 
 			akışı "main" fonksiyonunun sonuna gelmesinden dolayı "exit" fonksiyonu çağrılacak ve ilgili bütün "thread" ler yok 
 			edilecektir.
