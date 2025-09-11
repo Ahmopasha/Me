@@ -1,0 +1,1991 @@
+> Prosesler Arası Haberleşme Yöntemleri: Bir prosesin diğer bir prosese byte düzeyinde bir bilgi göndermesine v o prosesin de bu bilgiyi almasına "proseslerarası haberleşme (inteprocess communication ya da IOPC)
+denilmektedir. Proseslerarsı haberleşme sistem programlamanın önemli konularındandır. Modern işletim sistemlerinde proseslerin bellek alanları sayfa tabloları yoluyla biribirinden izole edildiği için bir prosesin
+diğerine bilgi gönderip ondan bilgi alması	ancak özel birtakım yöntemlerle gerçekleştirilmektedir. Proseslerarası haberleşme kendi içinde iki ana bölüme  ayrılabilir:
+
+    -> Aynı makinenin prosesleri arasında haberleşme
+    -> Farklı makinelerin prosesleri arasında haberleşme
+
+Aynı makinenin prosesleri arasındaki haberleşmelerde farklı işletim sistemlerinde benzer mekanizmalar geliştirilmiştir. Farklı makinelerin prosesleri arasındaki haberleşmenin farklı unsurları da bulunmaktadır. İki
+makinedeki farklı proseslerin haberleşebilmesi için bir haberleşme ortamının oluşturulmuş olması gerekir. Genel olarak haberleşmede uyulması gereken kurallar topluluğuna "protokol (protocol)" denilmektedir. Farklı
+maikenelerin prosesleri arasındaki haberleşmeler iyi tanıomlanmış protokoller yoluyla yapılmaktadır. Bunun için çeşitli protokol aileleri geliştirilmiştir. Günümüzde en yaygın kullanılan protok ailesi IP denilen
+protokol ailesidir. Biz kursumuzun bu bölümünde öne "aynı makinenin prosesleri arasındaki haberleşmeleri" inceleyeciz. Daha sonra başka bir bölümde IP protokol ailesi ile haberleşme üzerinde duracağız. Haberleşme
+sistemleri verilerin gönderilip alınma biçimine göre iki kısma ayrılmaktadır:
+
+	-> Stream Tarzı (Stream Oriented) Haberleşme
+	-> Paket ya da Mesaj Tarzı (Message Oriented) Haberşleme
+
+Buradaki,
+    >> Stream tarzı haberleşme denildiğinde gönderen ve alan tarafın istediği kadar byte'ı gönderip alabilmesi anlaşılmaktadır. Örneğin borular stream tarzı bir haberleşme sunmaktadır. Yani borularda gönderen taraf
+    istediği kadar byte'ı üst üste gönderebilir. Bunlar byte düzeyinde sıraya dizilirler. Alan taraf da istediği kadar byte'ı alabilir. Gönderen taraf n byte gönderdiğinde alan taraf bu n byte'ı tek hamlede almak
+    zorunda değildir. 
+    
+    >> Paket ya da mesaj tabanlı haberleşmede gönderen taraf bir grup bilgiyi bir paket ya da mesaj adı altında gönderir. Alan taraf byte düzeyinde alma yapamaz. Gönderilen paketin hepsini almak zorundadır. Ağ
+    haberleşmelerinde bu tarz haberleşmelere "datagram" haberleşmesi de denilmektedir. İşte borular stream tabanlı bir haberleşme sunarken mesaj kuyrukları mesaj tabanlı (ya da paket tabanlı da diyebiliriz) bir
+    haberleşme sunmaktadır.
+
+Şimdi de prosesler arası haberleşme yöntemlerini irdeleyelim: 
+    >> Aynı Makinenin Prosesleri Arasında Haberleşme : Aynı makinenin prosesleri arasındaki haberleşmelerde Windows sistemleri ile UNIX/Linux (ve macOS) sistemleri arasındaki yöntemler çok benzerdir. Tabii bu
+    yöntemler bu sistemlerde farklı fonksiyonlarla gerçekleştirilmektedir. Yöntemler tema olarak birbirilerine bzense de ayrıntılarda farklılıklar bulunmaktadır. Biz de kurusumuzun bu bölümünde önce değişik
+    yöntemleri önce UNIX/Linux (dolayısıla macOS) sistemlerinde sonra da Windows sistemlerinde göreceğiz.
+        >>> UNIX/Linux Sistemlerinde:
+            >>>> Boru Haberleşmesi : Boru haberleşmesi en yalın ve en çok kullanılan proseslerarası haberleşme yöntemidir. Boru FIFO prensibiyle çalışan bir kuyruk sistemidir. Borunun bir ucu bir proseste diğer ucu
+            diğer prosestedir. Proseslerden biri boruya yazma yaptığında diğeri yazılanları yazıldığı sırada okumaktadır. Boruların belli bir uzunluğu vardır. Boruya yazma yapan proses eğer borudan okuma yapan proses
+            yavaş kalırsa boruyu doldurabilir. Dolu bir boruya yazma yapıldığında yazma yapan taraf bloke olur (yani CPU zamanı harcamadan bekler) ta ki okuyan taraf borıda yer açana kadar. Benzer biçimde borudan okuma
+            yapan taraf boru boşsa okunacek bir şey kalmadığı için bloke olmaktadır. Ta ki yazan taraf boruya bir şey yazana kadar. Böylece boru haberleşmesinde yazan taraf okuyan tarafı okuyan taraf da yazan tarafı
+            beklemektedir. Dolayısıyla bu yöntem kendi içerisinde bir senkroniasyon da içermektedir. Boru haberleşmesi her zaman önce yazan tarafın boruyu kapatmasıyla sonlandırılır. Bu durumda borudan okuma yapan taraf
+            önce boruda kalanları okur, sonra okunacak bir şey kalmayınca o da boruyu kapatır. Haberşelmede önce okuyan tarafın boruyu kapatması patolojik bir durumdur. Boru haberleşmeleri kendi aralarında ikiye
+            ayrılmaktadır:
+
+                -> İsimsiz Boru Haberleşmeleri (Unnamed Pipes ya da Anonymous Pipe)
+                -> İsimli Boru Haberleşmeleri (Named Pipes ya da FIFO)
+
+            İsimiz boru haberleşmesi üst ve alt prosesler arasında kullanılmaktadır. Ancak isimli boru haberleşmesi herhangi iki proses arasında kullanılabilmektedir. 
+                >>>>> İsimsiz Boru Haberleşmesi : UNIX/Linux (ve macOS) sistemlerinde isimsiz boru haberleşmesi şu adımlardan geçilerek gerçekleştirilmektedir:
+                    
+                    -> Önce üst proses pipe POSIX fonksiyonuyla isimsiz boruyu yaratır. pipe fonksiyonun prototipi şöyledir:
+
+                        #include <unistd.h>
+                        int pipe(int pipefd[2]);
+
+                    pipe fonksiyonunun parametresi int türden göstericidir. Programcı 2 elemanlı int bir dizi açarak dizinin adresini fonksiyona geçirir. (Prototipteki dizi sentaksının göstericiden hiçbir farkı yoktur.
+                    Dolayısıyla burada programcı aslında fonksiyona iki elemanlı int dizinin adresini geçirmek zorunda dğeildir. Burada okunabilirliğin artırılması için böyle bir prototip yazılmıştır.) Fonksiyon boruyu
+                    yaratır. Boruya ilişkin iki betimleyiciyi argüman olarak verdiğimiz int diziye yerleştirir. Dizinin ilk elemanındaki (0'ıncı indeksteki) betimleyici "read-only" bir betimleyicidir ve borudan okuma yapmak
+                    için kullanılmalıdır. Dizinin ikinci elemanındaki (1 numaralı indeksindeki) betimleyici "write only" bir betimleycidir boruya yazma yapmak için kullanılmalıdır. Fonksiyon başarı durumunda 0 değerine,
+                    başarısızlık durumunda -1 değerine geri döner. Örneğin:
+
+                        int pfds[2];
+                        if (pipe(pfds) == -1)
+                            exit_sys("pipe");
+
+                        /* pfds[0] betimleyicisi okuma yapmak için pfds[1] betimleyicisi yazma yapmak için kullanılmalıdır */
+
+                    -> Artık alt proses yaratılır. Böylece üst prosesteki boru betimleyicileri de alt proses aktarlmış olur. Örneğin:
+
+                        int pfds[2];
+                        int pid;
+
+                        if (pipe(pfds) == -1)
+                            exit_sys("pipe");
+
+                        if ((pid = fork()) == -1)
+                            exit_sys("pid");
+
+                        if (pid != 0) {		/* parent process */
+                            ...
+                        }
+                        else {				/* child process */
+                            ...
+                        }
+                    
+                    -> Boru ve alt proses yaratıldıktan sonra hangi tarafın okuma yapacağına ve hangi tarafın yazma yapacağına programcının karar vermesi gerekir. Örneğin üst proses yazma yapacak, alt proses okuma yapacak
+                    olabilir. Ya da bunun tersi olabilir. Borular sanki birer dosyaymış gibi ele alınmaktadır. Dolayısıyla borulardan okuma yapmak için read fonksiyonu, borulara yazma yapmak için write fonksiyonu
+                    kullanılmaktadır. fork işlemi sonrasında üst prosesteki iki boru betimleyicisi alt prosese aktarılmış olur. Böylece hem üst proseste hem de alt proseste okuma ve yazma betimleyicileri bulunacaktır. Normal
+                    olarak boruya yazma potansiyelinde olan ve borudan okuma potansiyelinde olan tek bir betimleyici bulunmalıdır. Dolaysıyla yazan taraf okuma betimleyicisini, okuyan taraf ise yazma betimelyicisini kapatmalıdır.
+                    Örneğin üst proses yazma yapacak olsun alt proses de okuma yapacak olsun:
+
+                        int pfds[2];
+                        int pid;
+
+                        if (pipe(pfds) == -1)
+                            exit_sys("pipe");
+
+                        if ((pid = fork()) == -1)
+                            exit_sys("pid");
+
+                        if (pid != 0) {				/* üst proses  boruya yazma yapacak */
+                            close(pfds[0]);
+                            ...
+                        }
+                        else {						/* alt proses borudan okuma yapacak */
+                            close(pfds[1]);
+                            ...
+                        }
+
+                    read fonksiyonu ile borudan n byte okuma yapılmak istendiğinde eğer boruda hiçbir byte yoksa read fonksiyonu bloke olur ve en az 1 byte okuyana kadar beklemeye yol açar. Eğer borudan n byte okunmak istediniğinde
+                    boruda en az 1 byte bilgi oluşmuşsa bu durumda read fonksiyonu n byte'ın tamamı okunan kadar blokede beklemez. Okuyabildiği kadar byte'ı okur ve okuyabildiği byte sayısı ile geri döner. Eğer boruda okunacak bir
+                    şey yoksa ancak boruya yazma potansiyelinde olan tüm betimleyiciler de kapatılmışsa bu durumda read fonksiyonu bloke olmaz ve 0 değeri ile geri döner. Yani read fonksiyonu 0 ile geri dönmüşse bu durum "boruda bir
+                    şey kalmadı yazan taraf da boruyu kapatmış" anlamına gelmektedir. write fonksiyonu ile boruya n byte yazma yapılmak istendiğinde write fonksiyonu n byte'ın hepsi yazlana kadar blokede beklemektedir. Yani borulara
+                    kısmi yazım (partial write) mümkün değildir. Örneğin boruda 10 byte'lık boş alan olsun. Biz de write fonksiyonu ile boruya 15 byte yazmak isteyelim. Bu durumda bu 15 byte'ın tamamı yazılana kadar write fonksiyonu
+                    blokede bekleyecektir. Borudan okuma potansiyeline sahip hiçbir betimleyici kalmadığı durumda boruya write fonksiyonu ile bir şey yazılmak istendiğinde UNIX/Linux sistemlerinde SIGPIPE isimli sinyal oluşmaktadır.
+                    Bu sinyal de prosesin sonandırılmasına yol açmaktadır.
+                        * Örnek 1, Aşağıdaki örnekte üst proses alt prosese 1000000 tane int değeri boruyu yoluyla iletmekte ve alt proses de bunları borudan alarak stdout dosyasına yazdırmaktadır. 
+                            #include <stdio.h>
+                            #include <stdlib.h>
+                            #include <unistd.h>
+                            #include <sys/wait.h>
+
+                            void exit_sys(const char *msg);
+
+                            int main(void)
+                            {
+                                int pfds[2];
+                                int pid;
+                                ssize_t result;
+                                int val;
+                                
+                                if (pipe(pfds) == -1)
+                                    exit_sys("pipe");
+
+                                if ((pid = fork()) == -1)
+                                    exit_sys("pid");
+
+                                if (pid != 0) {		/* parent process writes to pipe */
+                                    close(pfds[0]);
+
+                                    for (int i = 0; i < 10; ++i) 
+                                        if (write(pfds[1], &i, sizeof(int)) == -1)
+                                            exit_sys("write");
+                                    close(pfds[1]);
+
+                                    if (wait(NULL) == -1)
+                                        exit_sys("wait");
+                                    
+                                }
+                                else {				/* child process reads from pipe */
+                                    close(pfds[1]);
+                                    
+                                    while ((result = read(pfds[0], &val, sizeof(int))) > 0) {
+                                        printf("%d ", val);
+                                        fflush(stdout);
+                                    }
+                                    if (result == -1)
+                                        exit_sys("write");
+                                    close(pfds[0]);
+                                }
+
+                                return 0;
+                            }
+
+                            void exit_sys(const char *msg)
+                            {
+                                perror(msg);
+
+                                exit(EXIT_FAILURE);
+                            }
+
+                İsimsiz boru haberleşmesinde neden okuyan taraf yazma betimleyicini yazan taraf da okuma betimleyicini kapatmaktadır? Eğer okuyan taraf yazma betimeleyicisini kapatmazsa yazab taraf yazma betimleyicisini kapatsa bile
+                okuyan taraftaki read fonksiyonu "hala boruya yazma potansiyelinde olan bir betimleyici bulunduğu için" 0 ile geri dönmeyecektir ve bloke oluşturacaktır. Yazan tarafın okuma betimelyicisini kapatmaması önceki kadar
+                önemlib bir probleme yol açmayacaksa da betimleyicilerin boşuna betimelyici tablosunda yer kaplaması iyi bir teknik değildir. Yazna tarafın da okuma betimelyicisini kapatması en normal durumdur. 
+                    * Örnek 1, Aşağıdaki örnekte "sample" programı komut satırıyla aldığı programı (örneğimizde "mample") fork/exec yaparak çalıştırmaktadır. Ancak "sample" programı fork işlemi öncesinde isimsiz boru yaratıp exec
+                    yapmaktadır. exec yapılan program kodu boru betimleyicisini bilemeyeceği için "sample" programı bu betimelyiciyi çalıştırdığı programa ("mample") komut satırı argümanı olarak aktarmaktadır. 
+                        /* sample.c */
+                            #include <stdio.h>
+                            #include <stdlib.h>
+                            #include <unistd.h>
+                            #include <sys/wait.h>
+
+                            void exit_sys(const char *msg);
+
+                            int main(int argc, char *argv[])
+                            {
+                                int pfds[2];
+                                int pid;
+                                ssize_t result;
+                                int val;
+                                char buf[10];
+
+                                if (argc != 2) {
+                                    fprintf(stderr, "wrong number of arguments!..\n");
+                                    exit(EXIT_FAILURE);
+                                }
+                                
+                                if (pipe(pfds) == -1)
+                                    exit_sys("pipe");
+
+                                if ((pid = fork()) == -1)
+                                    exit_sys("pid");
+
+                                if (pid != 0) {		/* parent process writes to pipe */
+                                    close(pfds[0]);
+
+                                    for (int i = 0; i < 1000000; ++i) 
+                                        if (write(pfds[1], &i, sizeof(int)) == -1)
+                                            exit_sys("write");
+                                    close(pfds[1]);
+
+                                    if (wait(NULL) == -1)
+                                        exit_sys("wait");
+                                    
+                                }
+                                else {				/* child process reads from pipe */
+                                    close(pfds[1]);
+                                    sprintf(buf, "%d", pfds[0]);
+
+                                    if (execlp(argv[1], argv[1], buf, (char *)NULL) == -1)
+                                        exit_sys("execvp");
+
+                                    /* unreachable code */
+                                }
+
+                                return 0;
+                            }
+
+                            void exit_sys(const char *msg)
+                            {
+                                perror(msg);
+
+                                exit(EXIT_FAILURE);
+                            }
+
+                        /* mample.c */
+                            #include <stdio.h>
+                            #include <stdlib.h>
+                            #include <unistd.h>
+
+                            void exit_sys(const char *msg);
+
+                            int main(int argc, char *argv[])
+                            {
+                                int pfd;
+                                ssize_t result;
+                                int val;
+
+                                if (argc != 2) {
+                                    fprintf(stderr, "wrong number of arguments!..\n");
+                                    exit(EXIT_FAILURE);
+                                }
+
+                                pfd = atoi(argv[1]);
+
+                                while ((result = read(pfd, &val, sizeof(int))) > 0) {
+                                    printf("%d ", val);
+                                    fflush(stdout);
+                                }
+                                printf("\n");
+                                if (result == -1)
+                                    exit_sys("read");
+
+                                close(pfd);
+
+                                return 0;
+                            }
+
+                            void exit_sys(const char *msg)
+                            {
+                                perror(msg);
+
+                                exit(EXIT_FAILURE);
+                            }
+
+
+                >>>>> İsimli Boru Haberleşmesi : UNIX/Linux (ve macOS) sistemlerinde isimli borular sanki bir dosyaymış gibi oluşturulup kullanılmaktadır. Programcı önce bir isimli boru dosyasını oluşturmalıdır. Bu sistemlerde isimli
+                borulara "fifo" da dendiğini anımsayınız. İsimli boru dosyaları mkfifo isimli POSIX fonksiyonuyla yaratılmaktadır. Fonksiyonun prototipi şöyledir:
+
+                    #include <sys/stat.h>
+                    int mkfifo(const char *path, mode_t mode);
+
+                Boru dosyaları gerçek birer dosya değildir. Bunların yalnızca dizin girişleri vardır. Bu dosylar açıldığında aslında boru yine işletim sistemi tarafından kernel alanı içerisinde oluşturulmaktadır. Buradaki dizin girişi
+                yalnızca farklı proseslerin aynı isim altında anlaşmaları için kullanılmaktadır. mkfifo fonksiyonunun birinci parametresi yaratılacak boru dosyasının yol ifadesini belirtir. İkinci parametre ise erişim haklarını
+                belirtmektedir. Fonksiyon başarı durumunda 0 değerine, başarısızlık durumunda -1 değerine geri dönmektedir. Örneğin:
+
+                    if (mkfifo("myfifo", S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH) == -1)
+                        exit_sys("mkfifo");
+
+                mkfifo fonksiyonu prosesin umask değerini dikkat ealmaktadır. Eğer yaratacağınız borunun tam olarak sizin belirlediğiniz umask değerine sahip olmasını istiyorsanız önce umask(0) çağrısını yapmalısınız. Boru dosyaları
+                "ls -l" komutunda dosya türü olarak "p" ile temsil edilmektedir. Örneğin:
+
+                    prw-r--r-- 1 kaan study     0 Ara 24 17:34 myfifo
+
+                Aşağıda örnek olarak "mkfifo" komutunun bir benzeri verilmiştir. Komuta isteğe bağlı olarak -m seçeneği girilebilmektedir. 
+                    * Örnek 1,
+                        /* mymkfifo.c */
+                            #include <stdio.h>
+                            #include <stdlib.h>
+                            #include <string.h>
+                            #include <stdbool.h>
+                            #include <sys/stat.h>
+                            #include <getopt.h>
+
+                            bool check_octal(const char *arg);
+                            void exit_sys(const char *msg);
+
+                            int main(int argc, char *argv[])
+                            {
+                                int m_flag, err_flag;
+                                int result;
+                                char *m_arg;
+                                int mode;
+
+                                m_flag = err_flag = 0;
+                                mode = S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH;
+
+                                opterr = 0;
+                                while ((result = getopt(argc, argv, "m:")) != -1) {
+                                    switch (result) {
+                                        case 'm':
+                                            m_flag = 1;
+                                            m_arg = optarg;
+                                            break;
+                                        case '?':
+                                            if (optopt == 'b')
+                                                fprintf(stderr, "-b option given without argument!..\n");
+                                            else
+                                                fprintf(stderr, "invalid option: -%c\n", optopt);
+                                            err_flag = 0;
+                                        break;
+                                    }
+                                }
+                                if (err_flag)
+                                    exit(EXIT_FAILURE);
+
+                                if (argc - optind == 0) {
+                                    fprintf(stderr, "pipe name(s) must be specified!..\n");
+                                    exit(EXIT_FAILURE);
+                                }
+
+                                if (m_flag) {
+                                    if (!check_octal(m_arg)) {
+                                        fprintf(stderr, "invalid mode parameter: %s\n", m_arg);
+                                        exit(EXIT_FAILURE);
+                                    }
+                                    sscanf(m_arg, "%o", &mode);
+                                }
+
+                                umask(0);
+                                
+                                for (int i = optind; i < argc; ++i)
+                                    if (mkfifo(argv[i], mode) == -1)
+                                        perror(argv[i]);
+
+                                return 0;
+                            }
+
+                            bool check_octal(const char *arg)
+                            {
+                                if (strlen(arg) > 3) 
+                                    return false;
+
+                                for (int i = 0; arg[i] != '\0'; ++i)
+                                    if (arg[i] < '0' || arg[i] > '7')
+                                        return false;
+                                
+                                return true;
+                            }
+
+                            void exit_sys(const char *msg)
+                            {
+                                perror(msg);
+
+                                exit(EXIT_FAILURE);
+                            }
+
+                İsimli boru mkfifo fonksiyonuyla ya da mkfifo komutuyla yaratıldktan sonra artık haberleşecek iki proses de boruyu open fonksiyonuyla açmalıdır. Boruya yazma yapacak prosese O_WRONLY bayrağını, borudan okuma yapacak
+                proses O_RDONLY bayrağını kullanmalıdır. Boruların O_RDWR modunda açılması Linux sistemlerinde geçerli olsa da POSIX standartlarında "tanımsız davranış" oluşturmaktadır. İki proses de uygun bir biçimde open fonksiyonuyla
+                boruyu açtıktan sonra artık tıpkı isimsiz borularda oludğu gibi write ve read fonksiyonlarıyla haberleşme sağlanır. write ve read fonksiyonlarınınm davranışı isimsiz borularda olduğu gibidir. İsimli borular sanki bir
+                dosyaymış gibi kullanıldığı halde aslında isimsiz borulardaki gibi kernel alanında bir FIFO kuyruk sistemini kullanırlar. Boruyu yine yazan taraf kapatmalıdır. Pkuyan taraf yine önce boruda kalanları okur sonra read
+                fonksiyonu 0 ile geri döner. read fonksiyonu 0 ile geri döndüğünde okuyan taraf da boruyu kapatır. open fonksiyonuyla isimli boru O_WRONLY modunda açılmak istendiğinde open fonksiyonu boru başka bir proses tarafından
+                O_RDONLY modunda açılana kadar blokeye yol açmaktadır. Benzer biçimde boruyu bir proses O_RDONLY modunda açmaya çalıştığında başka bir proses boruyu O_WRONLY modunda açana kadar open blokeye yol açmaktadır. Alında isimli
+                borular da "blokesiz modda" açılabilmektedir. Ancak bu konu kursumuzun kapsamı dışındadır.
+                    * Örnek 1, Aşağıdaki örnekte "pwrite.c" ve "pread.c" isimli iki program verilmiştir. pwrite programı boruyu O_WRONLY modunda açıp boruya yazma yapmaktadır. pread fonksiyonu ise boruyu O_RDONLY modunda açıp borudan
+                    okuma yapmaktadır.
+                        /* pwrite.c */
+                            #include <stdio.h>
+                            #include <stdlib.h>
+                            #include <fcntl.h>
+                            #include <unistd.h>
+
+                            void exit_sys(const char *msg);
+
+                            int main(int argc, char *argv[])
+                            {
+                                int pfd;
+
+                                if (argc != 2) {
+                                    fprintf(stderr, "wrong number of arguments!..\n");
+                                    exit(EXIT_FAILURE);
+                                }
+
+                                if ((pfd = open(argv[1], O_WRONLY)) == -1)
+                                    exit_sys("open");
+
+                                for (int i = 0; i < 1000000; ++i)
+                                    if (write(pfd, &i, sizeof(i)) == -1)
+                                        exit_sys("write");
+
+                                close(pfd);
+
+
+                                return 0;
+                            }
+
+                            void exit_sys(const char *msg)
+                            {
+                                perror(msg);
+
+                                exit(EXIT_FAILURE);
+                            }
+
+                        /* pread.c */
+                            #include <stdio.h>
+                            #include <stdlib.h>
+                            #include <fcntl.h>
+                            #include <unistd.h>
+
+                            void exit_sys(const char *msg);
+
+                            int main(int argc, char *argv[])
+                            {
+                                int pfd;
+                                ssize_t result;
+                                int val;
+
+                                if (argc != 2) {
+                                    fprintf(stderr, "wrong number of arguments!..\n");
+                                    exit(EXIT_FAILURE);
+                                }
+
+                                if ((pfd = open(argv[1], O_RDONLY)) == -1)
+                                    exit_sys("open");
+
+                                while ((result = read(pfd, &val, sizeof(int))) > 0) 
+                                    printf("%d ", val), fflush(stdout);
+
+                                if (result == -1)
+                                    exit_sys("read");
+
+                                printf("\n");
+
+                                close(pfd);
+
+                                return 0;
+                            }
+
+                            void exit_sys(const char *msg)
+                            {
+                                perror(msg);
+
+                                exit(EXIT_FAILURE);
+                            }
+
+                Pekiyi iki proses aynı anda isimli boruya yazma yaapmak isterse ne olur? İşte POSIX standrtlarına göre eğer yazılmak istenen bilgi <limits.h> dosyası içerisindeki PIPE_BUF sembolik sabitinden büyük olmadıktan sonra iç
+                içe geçme oluşmamaktadır. Yani bu durumda iki proses aynı anda boruya yazma yapmaya çalışsa bile önce birinin sonra diğerinin yazdıkları boruda görünür. Ancak PIPE_BUF değerinden daha büyük miktarda bilgi boruya yazılmak
+                istendiğinde iç içe geçme oluşabilmektedir.  
+
+            Şimdi de kabuk programlarının boru işlemlerini nasıl yaptığını açıklayan bir örnek yapalım. Örneğimizdeki "shellpipe.c" programı kabuk programının yaptığı gibi boru işlemini yapmaktadır. Bu program aşağıdaki gibi
+            çalıştırılmalıdır:
+
+                ./shellpipe "ls -l | wc"
+
+            Programda önce '|' karakterinin yeri bulunmuş ve bu karakterin iki tarafı da parse edilmiştir. Daha sonra işlemler şu sırada yürütülmüştür:
+
+                -> Üst proses ("shellpipe.c") bir boru yaratmıştır. Burada iki betimleyici elde etmiştir.
+
+                -> Üst proses '|' karakterin solundaki program için fork yapmıştır. Bu durumda boru betimleyicileri ayaratılan alt prosese aktarılmıştır. Sonra alt proseste okuma yapılmak için kullanılan boru betimelyeicisi kapatılmış
+                stdout betimelyicisi de boruya yönlendirilmiştir. Tabii diğer boru betimelyicisi de bu işlemden sonra kapatılmıştır. Nihayet bu işlemlerden sonra exec işlemi uygulanmıştır:
+
+                    if (pid1 == 0) {     /* first child */
+                        close(pfds[0]);
+                        if (dup2(pfds[1], 1) == -1)
+                            exit_sys("dup2");
+                        close(pfds[1]);
+
+                        if (execvp(pargs.prog1[0], &pargs.prog1[0]) == -1)
+                            exit_sys("execvp");
+                        
+                        /* unreachable code */
+                    }
+
+                -> Benzer işlemler '|' karakterinin sağındaki program için de yapılmıştır. Tabii '|' karakterinin sağındaki program  için fork yapıldığında artık alt proseste stin betimleyicisi boruya yönlendirilmiştir:
+                
+                    if ((pid1 = fork()) == -1)
+                        exit_sys("fork");
+
+                    if ((pid2 = fork()) == -1)
+                        exit_sys("fork");
+
+                    if (pid2 == 0) {     /* first child */
+                        close(pfds[1]);
+                        if (dup2(pfds[0], 0) == -1)
+                            exit_sys("dup2");
+                        close(pfds[0]);
+
+                        if (execvp(pargs.prog2[0], &pargs.prog2[0]) == -1)
+                            exit_sys("execvp");
+                        
+                        /* unreachable code */
+                    }
+
+                -> Artık üst prosesin de boru betimelycisilerini kapatması gerekmektedir. Böylece toplamda boru ile ilgili iki betimleyici kalacaktır. 
+
+            Aşağıda bu konuya ilişkin bir örnek verilmiştir:
+                * Örnek 1, 
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <string.h>
+                    #include <stdbool.h>
+                    #include <unistd.h>
+                    #include <sys/wait.h>
+
+                    #define MAX_ARGS    1024
+
+                    typedef struct tagPIPE_ARGS {
+                        char *prog1[MAX_ARGS];
+                        char *prog2[MAX_ARGS];
+                    } PIPE_ARGS;
+
+
+                    bool check_arg(char *arg, PIPE_ARGS *rargs);
+                    void exit_sys(const char *msg);
+
+                    int main(int argc, char *argv[])
+                    {
+                        char *arg;
+                        PIPE_ARGS pargs;
+                        int pfds[2];
+                        pid_t pid1, pid2;
+
+                        if (argc != 2) {
+                            fprintf(stderr, "wrong number of arguments!..\n");
+                            exit(EXIT_FAILURE);
+                        }
+
+                        if ((arg = strdup(argv[1])) == NULL) {
+                            fprintf(stderr, "cannot allocate memory!..\n");
+                            exit(EXIT_FAILURE);
+                        }
+
+                        if (!check_arg(arg, &pargs)) {
+                            fprintf(stderr, "invalid argument: \"%s\"\n", argv[1]);
+                            exit(EXIT_FAILURE);
+                        }
+
+                        if (pipe(pfds) == -1)
+                            exit_sys("pipe");
+
+                        if ((pid1 = fork()) == -1)
+                            exit_sys("fork");
+
+                        if (pid1 == 0) {     /* first child */
+                            close(pfds[0]);
+                            if (dup2(pfds[1], 1) == -1)
+                                exit_sys("dup2");
+                            close(pfds[1]);
+
+                            if (execvp(pargs.prog1[0], &pargs.prog1[0]) == -1)
+                                exit_sys("execvp");
+                            
+                            /* unreachable code */
+                        }
+
+                        if ((pid2 = fork()) == -1)
+                            exit_sys("fork");
+
+                        if (pid2 == 0) {     /* first child */
+                            close(pfds[1]);
+                            if (dup2(pfds[0], 0) == -1)
+                                exit_sys("dup2");
+                            close(pfds[0]);
+
+                            if (execvp(pargs.prog2[0], &pargs.prog2[0]) == -1)
+                                exit_sys("execvp");
+                            
+                            /* unreachable code */
+                        }
+
+                        free(arg);
+
+                        close(pfds[0]);
+                        close(pfds[1]);
+
+                        if (waitpid(pid1, NULL, 0) == -1)
+                            exit_sys("waitpid");
+
+                        if (waitpid(pid2, NULL, 0) == -1)
+                            exit_sys("waitpid");
+
+                        return 0;
+                    }
+
+                    bool check_arg(char *arg, PIPE_ARGS *pargs)
+                    {
+                        char *pos, *str;
+                        size_t i;
+
+                        if ((pos = strchr(arg, '|')) == NULL || strchr(pos + 1, '|') != NULL) 
+                            return false;
+                        *pos = '\0';
+                        
+                        i = 0;
+                        for (str = strtok(arg, " \t"); str != NULL; str = strtok(NULL, " \t"))
+                            pargs->prog1[i++] = str;
+                        pargs->prog1[i] = NULL;
+
+                        if (i == 0)
+                            return false;
+
+                        i = 0;
+                        for (str = strtok(pos + 1, " \t"); str != NULL; str = strtok(NULL, " \t"))
+                            pargs->prog2[i++] = str;
+                        pargs->prog2[i] = NULL;
+
+                        if (i == 0)
+                            return false;
+                        
+                        return true;
+                    }
+
+                    void exit_sys(const char *msg)
+                    {
+                        perror(msg);
+
+                        exit(EXIT_FAILURE);
+                    }
+
+            >>>> Paylaşılan Bellek Alanları: Proseslerarası haberleşme yöntemlerinden bir diğeri de "paylaşılan bellek alanları (shared memory)" denilen yöntemdir. Aslında bu yöntem hakkında biz sayfa tablolarını anlattığımız bölümde bazı
+            ipuçları vermiştik. Bu yöntemde farklı proseslerin sayfa tablolarındaki farklı sanal sayfa numaraları aynı fiziksel sayfaya yönlendirilmektedir. Böylece proseslerden biri o sanal sayfaya yazma yaptığında diğeri onu diğer sanal
+            sayfa yoluyla görebilmektedir. Örneğin:
+
+                Proses-1 Sayfa Tablosu
+
+                Sanal Sayfa No		Fiziksel Sayfa No
+                ....				....
+                1784				3641
+                ....				....
+
+                Proses-2 Sayfa Tablosu
+
+                Sanal Sayfa No		Fiziksel Sayfa No
+                ....				....
+                1432				3641
+                ....				....
+
+            Buradaki numaraların 16'lık sistemde olduğunu varsayalım. Burada Proses-1'in 1784 numaralı sanal sanal sayfa adresiyle [1784000-17844FFF] yaptığı erişimlerle Proses-2'nin 1432 numaralı sanal sayfa adresiyle [1432000-1432FFF]
+            yaptığı erişimler aslında aynı fiziksel bölgeyi belirtmektedir. UNIX/Linux (ve macOS) sistemlerinde paylaşılan bellek alanlarının oluşturulması için iki farklı fonksiyon grubu kullanılabilmektedir. Bunlardan biri eski System-5
+            fonksiyonlarıdır. Diğeri daha modern fonksiyonlardır. Bu modern fonksiyon grubuna halk arasında "POSIX Shared Memory" fonksiyonları da denilmektedir. Aslında her iki fonksiyon grubu da POSIX standartlarında bulunmaktadır.
+            System-5 paylaşılan bellek aşanı fonksiyonları çok esikden beri UNIX türevi sistemlerde bulunmaktadır. POSIX paylaşılan bellek alanı fonksiyonları ise sistemlere 90'lı yılların ortalarında girmeye başlamıştır. Ancak bugün her
+            iki grup fonksiyonun da kullanıldığını söyleyebiliriz. Biz kurusumuzda yalnızca POSIX paylaşılan bellek alanı fonksiyonlarını göreceğiz. POSIX paylaşılan bellek alanları tipik olarak şu adımlardan geçilerek kullanılmaktadır:
+
+                -> POSIX paylaşılan bellek alanı nesnesi iki proses tarafından shm_open fonksiyonuyla yaratılabilir ya da zaten var olan nesne shm_open fonksiyonu ile açılabilir. Fonksiyonun prototipi şöyledir:
+
+                    #include <sys/mman.h>
+                    int shm_open(const char *name, int oflag, mode_t mode); 
+
+                Fonksiyonun birinci parametresi paylaşılan bellek alanı nesnesinin ismini belirtmektedir. Bu ismi kök dizinde bir dosya ismi gibi verilmesi gerekmektedir. (POSIX standartlarında bazı sistemlerin buradaki dosya isminin başka
+                dizinlerde olmasına izin verebildiğini belirtmiştir.) Fonksiyonun ikinci parametresi paylaşılan bellek alanının açış bayraklarını belirtmektedir. Bu bayraklar şunlardan birini içerebilir:
+
+                    O_RDONLY: Bu durumda paylaşılan bellek alanından yalnızca okuma yapılabilir.
+                    O_RDWR: Bu durumda paylaşılan bellek alanından hem okuma yapılabilir hem de oraya yazma yapılabilir.
+
+                Aşağıdaki bayraklar da açış moduna eklenebilir:
+
+                    O_CREAT: Paylaşılan bellek alanı yoksa yaratılır, varsa olan açılır.
+                    O_EXCL: O_CREAT bayrağı ile birlikte kullanılabilir. Paylaşılan bellek alanı zaten varsa fonksiyon başarısız olur.
+                    O_TRUNC: Paylaşılan bellek alanı varsa sıfırlanarak açılır. Bu mod için O_RDWR bayrağının kullanılmış olması gerekmektedir. 
+
+                Fonksiyonun üçüncü parametresi paylaşılan bellek alanının erişim haklarını belirtmektedir. Tabii ancak ikinci parametrede O_CREAT bayrağı kullanılmışsa bu parametreye gereksinim duyulmaktadır. İkinci parametrede O_CREAT bayrağı
+                kullanılmamışsa üçüncü parametre fonksiyon tarafından hiç kullanılmamaktadır. shm_open bize tıpkı bir disk dosyasında olduğu gibi bir dosya betimleyicisi vermektedir. Fonksiyon başarısız olursa yine -1 değerine geri döner ve
+                errno değişkeni uygun biçimde set edilir. Burada yaratılan paylaşılan bellek alanı nesnesi için bir dizin girişi oluşturulmamaktadır. Yani paylaşılan bellek alanı nesnesi bir dosyaymış gibi ele alınmakla birlikte aslında bir
+                dosya değildir. Örneğin:
+
+                    int fdshm;
+
+                    if ((fdshm = shm_open(SHM_NAME, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) == -1)
+                        exit_sys("shm_open");
+
+                -> Paylaşılan bellek alanı yaratıldıktan sonra ftruncate fonksiyonu ile ona bir büyüklük vermek gerekir. Örneğin:
+
+                    if (ftruncate(fdshm, SHM_SIZE) == -1)
+                        exit_sys("ftruncate");
+
+                Tabii paylaşılan bellek alanı zaten yaratılmışsa ve biz onu açıyorsak ftruncate fonksiyonunu aynı uzunlukta çağırdığımızda aslında fonksiyon herhangi bir şey yapmayacaktır. Yani aslında ftruncate fonksiyonu paylaşılan bellek
+                alanıilk kez yaratılırken bir kez çağrılır. Ancak yukarıda da belirttiğimiz gibi aynı uzunlukta ftruncate işleminin bir etkisi yoktur. ftruncate aslında bir dosyanın büyüklüğünü değiştirmek için kullanılan genel bir fonksiyondur.
+                Fonksiyonun prototipi şöyledir:
+
+                    #include <unistd.h>
+                    int ftruncate(int fd, off_t length);
+
+                Fonksiyonun birinci parametresi dosya betimleyicisini ikinci parametresi dosyanın yeni uzunluğunu almaktadır. Fonksiyon başarı durumunda 0 değerine başarısızlık durumunda -1 değerine geri döner. ftruncate POSIX fonksiyonunun
+                truncate isminde yol ifadeis ile çalışanm bir biçimi de vardır. POSIX paylaşılan bellek alanı nesneleri Linux'ta dosya sisteminde /dev/shm dizini içerisinde görüntülenmektedir. Yani programcı isterse bu dizin içerisindeki nesneleri
+                komut satırında rm komutuyla silebilir. 
+
+                -> Artık paylaşılan bellek alanı nesnesinin belleğe "map" edilmesi gerekmektedir. Bunun için mmap isimli bir POSIX fonksiyonu kullanılmaktadır. mmap fonksiyonu pek çok UNIX türevi sistemde bir sistem fonksiyonu olarak
+                gerçekleştirilmiştir. mmap paylaşılan bellek alanlarının dışında başka amaçlarla da kullanılabilen ayrıntılı bir sistem fonksiyonudur. Bu nedenle biz burada önce fonksiyonun paylaşılan bellek alanlarında kullanımına kısaca değineceğiz.
+                Sonra bu fonksiyonu ayrıca daha ayrıntılı biçimde ele alacağız. mmap fonksiyonunun prototipi şöyledir:
+
+                    #include <sys/mman.h>
+                    void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t off);
+
+                Fonksiyonun birinci parametresi, "mapping için" önerilen sanal adresi belirtmektedir. Programcı belli bir sanal adresin mapping için kullanılmasını isteyebilir. Ancak fonksiyon flags parametresinde MAP_FIXED geçilmemişse bu adresi tam
+                (exact) olarak yani verildiği gibi kullanmayabilir. Fonksiyon bu önerilen adresin yakınındaki bir sayfayı tahsis edebilir. Bu tahsisatın burada belirtilen adresin neresinde yapılacağı garanti edilmemiştir. Yani buradaki adres eğer
+                fonksiyonun flags parametresinde MAP_FIXED kullanılmamışsa bir öneri niteliğindedir. Eğer bu adres NULL olarak geçilirse bu durumda mapping işlemi işletim sisteminin kendi belirlediği bir adresten itibaren yapılır. Tabii en tipik durum
+                bu parametrenin NULL adres olarak geçilmesidir. Fonksiyonun ikinci parametresi, paylaşılan bellek alanının ne kadarının map edileceğini belirtir. Örneğin paylaşılan bellek alanı nesnesi 1MB olabilir. Ancak biz onun 100K'lık bir kısmını
+                map etmek isteyebiliriz. Ya da tüm paylaşılan bellek alanını da map etmek isteyebiliriz. Bu uzunluk sayfa katlarında olmak zorunda değildir. Ancak pek çok sistem bu uzunluğu sayfa katlarına doğru yukarı yuvarlamaktadır. Yani biz uzunluğu
+                örneğin 100 byte verebiliriz. Ancak sistem 100 byte yerine sayfa uzunluğu olan 4096 byte'ı map edecektir. Fonksiyonun üçüncü parametresi, mapping işleminin koruma özelliklerini belirtmektedir. Başka bir deyişle bu parametre paylaşılan
+                bellek alanı için ayrılacak fiziksel sayfaların işlemci düzeyinde koruma özelliklerini belirtir. Bu özellikler şunlardan oluşturulabilir:
+
+                    PROT_READ
+                    PROT_WRITE
+                    PROT_EXEC
+                    PROT_NONE
+
+                PROT_READ sayfanın "read only" olduğunu belirtir. Böyle sayfalara yazma yapılırsa işlemci exception oluşturur ve program SIGSEGV sinyali ile sonlandırılır. PROT_WRITE sayfaya yazma yapılabileceğini belirtmektedir. Örneğin
+                PROT_READ|PROT_WRITE hem okuma hem de yazma anlamına gelmektedir. PROT_EXEC ilgili sayfada bir kod varsa (örneğin oraya bir fonksiyon yerleştirilmişse) o kodun çalıştırılabilirliği üzerinde etkili olmaktadır. Örneğin Intel ve ARM
+                işlemcilerinde fiziksel sayfa PROT_EXEC ile özelliklendirilmemişse o sayfadaki bir kod çalıştırılamamaktadır. PROT_NONE o sayfaya herhangi bir erişimin mümkün olamayacağını belirtmektedir. Yani PROT_NONE olan bir sayfa ne okunabilir ne de
+                yazılabilir. Bu tür sayfa özellikleri "guard page" oluşturmak için kullanılabilmektedir. Tabii bir sayfanın koruma özelliği daha sonra da değiştirilebilir. Aslında bütün işlemciler buradaki koruma özelliklerinin hepsini desteklemeyebilirler.
+                Örneğin Intel işlemcilerinde PROT_WRITE zaten okuma özelliğini de kapsamaktadır. Bazı işlemciler sayfalarda PROT_EXEC özelliğini hiç bulundurmamaktadır. Ancak ne olursa olsun programcı sanki bu özelliklerin hepsi varmış gibi bu parametreyi 
+                oluşturmalıdır. Fonksiyonun dördüncü parametresi olan flags aşağıdaki değerlerden yalnızca birini alabilir:
+
+                    MAP_PRIVATE
+                    MAP_SHARED
+
+                MAP_PRIVATE ile oluşturulan mapping'e "private mapping", MAP_SHARED ile oluşturulan mapping'e ise "shared mapping" denilmektedir. MAP_PRIVATE "copy on write" denilen semantik için kullanılmaktadır. "Copy on write" işlemi "yazma yapılana kadar
+                sanal sayfaların aynı fiziksel sayfalara yönlendirilmesi ancak yazmayla birlikte o sayfaların bir kopyalarının çıkartılıp yazmanın o prosese özel olarak yapılması ve yapılan yazmaların paylaşılan bellek alanına yansıtılmaması" anlamına
+                gelmektedir. Başka bir deyişle MAP_PRIVATE şunlara yol açmaktadır;
+
+                    - Okuma yapılınca paylaşılan bellek alanından okuma yapılmış olur. 
+                    - Ancak yazma yapıldığında bu yazma paylaşılan bellek alanına yansıtılmaz. O anda yazılan sayfanın bir kopyası çıkartılarak yazma o kopya üzerine yapılır. Dolayısıyla başka bir proses bu yazma işlemini göremez. 
+
+                Bir proses ilgili paylaşılan bellek alanı nesnesini MAP_PRIVATE ile map ettiğinde diğer proses o alana yazma yaptığında onun yazdığını MAP_PRIVATE yapan prosesin görüp görmeyeceği POSIX standartlarında belirsiz (unspecified) bırakılmıştır.
+                Linux sistemlerinin man sayfasında da aynı "unspecified" durum belirtilmiş olsa da mevcut Linux çekirdeklerinde başka bir proses private mapping yapılmış yere yazma yaptığında bu yazma private mapping'in yapıldığı proseste görülmektedir. Ancak
+                sayfaya yazma yapıldığında artık o sayfanın kopyasından çıkartılacağı için bu yazma işleminden sonraki diğer prosesin yaptığı yazma işlemleri görülmemektedir. MAP_SHARED ise yazma işleminin paylaşılan bellek alanına yapılacağını yani
+                "copy on write" yapılmayacağını belirtmektedir. Dolayısıyla MAP_SHARED bir mapping'te paylaşılan alana yazılanlar diğer prosesler tarafından görülür. Normal olarak programcılar amaç doğrultusunda shared mapping kullanırlar. Private mapping
+                (yani "copy on write") bazı özel durumlarda tercih edilmektedir. Örneğin işletim sistemi (exec fonksiyonları) çalıştırılabilir dosyanın ".data" bölümünü private mapping yaparak belleğe mmap ile yüklemektedirler. Fonksiyonun flags parametresinde
+                MAP_PRIVATE ve MAP_SHARED değerlerinin yalnızca biri kullanılabilir. Ancak bu değerlerden biri ile MAP_FIXED değeri bit düzeyinde OR işlemine sokulabilmektedir. MAP_FIXED bayrağı, fonksiyonun birinci parametresindeki adres NULL geçilmemişse
+                bu adresin kendisinin aynen (hiç değiştirilmeden) kullanılacağını belirtmektedir. Yani bu adresin yakınındaki herhangi bir sayfa değil kendisi tahsis edilecek ve fonksiyon bu adresin aynısıyla geri dönecektir. Eğer MAP_FIXED bayrağı belirtilmişse
+                Linux sistemlerinde birinci parametredeki adresin sayfa katlarında olma zorunlululuğu vardır. Ancak POSIX standartlarının son versiyonları "may require" ifadesiyle bunun zorunlu olmayabileceğini belirtmektedir. Fonksiyonun son iki parametresi
+                dosya betimleyicisi ve bir de offset içermektedir. Paylaşılan bellek alanının belli bir offset'ten sonraki kısmı map edilebilmektedir. Örneğin paylaşılan bellek alanı nesnemiz 4MB olsun. Biz bu nesnenin 1MB'sinden itibaren 64K'lık kısmını map
+                edebiliriz. O halde mmap fonksiyonunu örneğin şöyle çağırabiliriz:
+
+                    shmaddr = mmap(NULL, SHM_SIZE, PROT_WRITE, MAP_SHARED, fdshm, 0);
+
+                Burada paylaşılan bellek alanı nesnesinin SHM_SIZE kadar alanı map edilmek istenmiştir. İlgili sayfalar PROT_WRITE özelliğine sahip olacaktır. Yani bu sayfalara yazma yapılabilecektir. Bu sayfalara yazma yapıldığında paylaşılan bellek alanı
+                nesnesi bundan etkilenecek yani aynı nesneyi kullanan diğer proseslerde de eğer shared mapping yapılmışsa bu durum gözükecektir. Burada paylaşılan bellek alanı nesnesinin 0'ıncı offset'inden itibaren SHM_SIZE kadar alanın map edildiğine dikkat
+                ediniz. mmap fonksiyonun son parametresindeki offset değeri MAP_FIXED belirtilmişse, birinci parametre ile son parametrenin sayfa katlarına bölümünden elde edilen kalan aynı olmak zorundadır. (Yani örneğin POSIX standartlarında işletim sistemi
+                eğer 5000 adresini kabul ediyorsa 5000 % 4096 = 4'tür. Bu durumda son parametrenin de 4096'ya bölümünden elde edilen kalan 4 olmalıdır.) Ancak MAP_FIXED belirtilmemişse POSIX standartları bu offset değerinin sayfa katlarında olup olmayacağını
+                işletim sistemini yazanların isteğine bırakmıştır. Linux çekirdeklerinde, MAP_FIXED belirtilsin ya da belirtilmesin bu offset değeri her zaman sayfa katlarında olmak zorundadır. mmap fonksiyonu başarı durumunda mapping yapılan sanal bellek
+                adresine geri dönmektedir. Fonksiyon başarısızlık durumunda MAP_FAILED özel değerine geri döner. Pek çok sistemde MAP_FAILED bellekteki son adres olarak aşağıdaki biçimde define edilmiştir:
+
+                    #define MAP_FAILED ((void *) -1)
+
+                Kontrol şöyle yapılabilir:
+
+                    shmaddr = mmap(NULL, SHM_SIZE, PROT_WRITE, MAP_SHARED, fdshm, 0);
+                    if (shmaddr == MAP_FAILED) 
+                        exit_sys("mmap");
+
+                Paylaşılan bellek alanı betimleyicisi mapping işleminden sonra close fonksiyonuyla kapatılabilir. Bu durum mapping'i etkilememektedir. 
+
+                -> Programcı paylaşılan bellek alanı ile işini bitirdikten sonra artık map ettiği alanı boşaltabilir. Bu işlem munmap POSIX fonksiyonu ile yapılmaktadır. (mmap fonksiyonunu malloc gibi düşünürsek munmap fonksiyonunu da free gibi düşünebiliriz.)
+                munmap fonksiyonunun prototipi şöyledir:
+
+                    #include <sys/mman.h>
+                    int munmap(void *addr, size_t len);
+
+                Fonksiyonun birinci parametresi, daha önce map edilen alanın başlangıç adresini belirtir. İkinci parametre unmap edilecek alanın uzunluğunu belirtmektedir. Fonksiyon birinci parametresinde belirtilen adresten itibaren ikinci parametresinde
+                belirtilen miktardaki byte'ı kapsayan sayfaları unmap etmektedir. (Örneğin buradaki adres bir sayfanın ortalarında ise ve uzunluk da başka bir sayfanın ortalarına kadar geliyorsa bu iki sayfa da tümden unmap edilmektedir.) POSIX standartları
+                işletim sistemlerinin birinci parametrede belirtilen adresin sayfa katlarında olmasını zorlayabileceğini (may require) belirtmektedir. Linux'ta birinci parametrede belirtilen adres sayfa katlarında olmak zorundadır. Fonksiyon başarı durumunda
+                0 değerine, başarısızlık durumunda -1 değerine geri döner ve errno değişkeni uygun biçimde set edilir. munmap ile zaten map edilmemiş bir alan unmap edilmeye çalışılırsa fonksiyon bir şey yapmaz. Bu durumda fonksiyon başarısızlıkla geri
+                dönmemektedir. Paylaşılan bellek alanına ilişkin dosya betimleyicisi close fonksiyonu ile kapatılabilir. Paylaşılan bellek alanı betimleyicisi close ile kapatıldığında munmap işlemi yapılmamaktadır. Zaten paylaşılan bellek alanı nesnesi map
+                edildikten sonra hemen close ile kapatılabilir. Bunun mapping işlemine bir etkisi olmaz. Unmap işlemi mevcut mapping'in bir kısmına yapılabilmektedir. Bu durumda işletim sistemi mapping işlemini ardışıl olmayan parçalara kendisi ayırmaktadır.
+                Örneğin:
+
+                    xxxxmmmmmmmmmxxxx
+
+                Burada "m" map edilmiş sayfaları "x" ise diğer sayfaları belirtiyor olsun. Biz de mapping'in içerisinde iki sayfayı unmap edelim:
+
+                    xxxxmmmmxxmmmxxxx
+
+                Görüldüğü gibi artık sanki iki ayrı mapping varmış gibi bir durum oluşmaktadır. Proses bittiğinde map edilmiş bütün alanlar zaten işletim sistemi tarafından unmap edilmektedir. 
+
+                -> Paylaşılan bellek alanı nesnesine ilişkin betimleyici close fonksiyonu ile sanki bir dosyaymış gibi kapatılır. Yukarıda da belirttiğimiz gibi bu kapatma işlemi aslında mapping işleminden hemen sonra da yapılabilir. 
+
+                -> Artık paylaşılan bellek alanı nesnesi shm_unlink fonksiyonu ile silinebilir. Eğer bu silme yapılmazsa sistem reboot edilene kadar nesne hayatta kalmaya devam edecektir (kernel persistant). shm_unlink fonksiyonun prototipi şöyledir:
+
+                    #include <sys/mman.h>
+                    int shm_unlink(const char *name);
+
+                Fonksiyon paylaşılan bellek alanı nesnesinin ismini alır onu yok eder. Başarı durumunda 0 değerine, başarısızlık durumunda -1 değerine geri dönmektedir. Örneğin:
+
+                    if (shm_unlink(SHM_PATH) == -1)
+                        exit_sys("shm_unlink");
+
+            Aşağıdaki örnekte prog1 programı paylaşılan bellek alanına bir şeyler yazmakta prog2 programı da bunu okumaktadır. prog1 programı işlemini bitirince paylaşılan bellek alanı nesnesini shm_unlink fonksiyonuyla silmektedir. 
+                * Örnek 1, 
+                    /* prog1.c */
+                        #include <stdio.h>
+                        #include <stdlib.h>
+                        #include <string.h>
+                        #include <fcntl.h>
+                        #include <sys/stat.h>
+                        #include <unistd.h>
+                        #include <sys/mman.h>
+
+                        #define SHM_PATH			"/this_is_a_sample_shared_memory"
+
+                        void exit_sys(const char *msg);
+
+                        int main(void)
+                        {
+                            int fdshm;
+                            char *shmem;
+
+                            if ((fdshm = shm_open(SHM_PATH, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) == -1)
+                                exit_sys("shm_open");
+
+                            if (ftruncate(fdshm, 4096) == -1)
+                                exit_sys("ftruncate");
+
+                            if ((shmem = (char *)mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, fdshm, 0)) == MAP_FAILED)
+                                exit_sys("mmap");
+
+                            printf("press ENTER to write shared memory...\n");
+                            getchar();
+
+                            strcpy(shmem, "this is a test...");
+
+                            printf("press ENTER to exit...\n");
+                            getchar();
+
+                            if (munmap(shmem, 4096) == -1)
+                                exit_sys("munmap");
+
+                            close(fdshm);
+
+                            if (shm_unlink(SHM_PATH) == -1)
+                                exit_sys("shm_unlink");
+
+                            return 0;
+                        }
+
+                        void exit_sys(const char *msg)
+                        {
+                            perror(msg);
+
+                            exit(EXIT_FAILURE);
+                        }
+
+                    /* prog2.c */
+                        #include <stdio.h>
+                        #include <stdlib.h>
+                        #include <fcntl.h>
+                        #include <sys/stat.h>
+                        #include <unistd.h>
+                        #include <sys/mman.h>
+
+                        #define SHM_PATH			"/this_is_a_sample_shared_memory"
+
+                        void exit_sys(const char *msg);
+
+                        int main(void)
+                        {
+                            int fdshm;
+                            char *shmem;
+
+                            if ((fdshm = shm_open(SHM_PATH, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) == -1)
+                                exit_sys("shm_open");
+
+                            if (ftruncate(fdshm, 4096) == -1)
+                                exit_sys("ftruncate");
+
+                            if ((shmem = mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, fdshm, 0)) == MAP_FAILED)
+                                exit_sys("mmap");
+
+                            printf("press ENTER to read shared memory...\n");
+                            getchar();
+
+                            puts(shmem);
+
+                            printf("press ENTER to exit...\n");
+                            getchar();
+
+                            if (munmap(shmem, 4096) == -1)
+                                exit_sys("munmap");
+
+                            close(fdshm);
+
+                            return 0;
+                        }
+
+                        void exit_sys(const char *msg)
+                        {
+                            perror(msg);
+
+                            exit(EXIT_FAILURE);
+                        }
+
+            Paylaşılan bellek alanları çok hızlı bir haberleşme sağlıyor olsa da kendi içerisinde bir senkronizasyona sahip değildir. Bir prosesin birden fazla bilgiyi farklı zamanlarda diğerine bu yöntemle iletmesi sırasında iki prosesin senkronize olması
+            yani koordineli bir biçimde çalışması gerekir. Bu senkronizasyon problemine "üretici tüketici problemi (producer-conseumer problem)" denilmektedir. Bu konu ileride kursumuzun thread'ler kısmında ele alınacaktır.
+
+            >>>> Bellek Tabanlı Dosyalar: Bellek tabanlı dosyalar (memory mapped files) 90'lı yıllarla birlikte işletim sistemlerine sokulmuştur. Microsoft ilk kez 32 bit Windows sistemlerinde (Windows NT ve sonra da Windows 95) bellek tabanlı dosyaları
+            işletim sisteminin çekirdeğine dahil etmiştir. 90'ların ortalarında bellek tabanlı dosyalar POSIX IPC nesneleriyle birlikte UNIX türevi sistemlere de resmi olarak sokulmuştur. macOS sistemleri de bellek tabanlı dosyaları desteklemektedir. Bellek
+            tabanlı dosyalar (memory mapped files) adeta diskte bulunan bir dosyanın prosesin sanal bellek alanına çekilmesi anlamına gelmektedir. Biz bir disk dosyasını bellek tabanlı biçimde açıp kullandığımızda dosya sanki bellekteymiş gibi bir durum
+            oluşturulur. Biz bellekte göstericilerle dosyanın byte'larına erişiriz. Bellekte birtakım değişikler yapıldığında bu değişiklikler dosyaya yansıtılmaktadır. Böylece dosya üzerinde işlemler yapılırken read ve write sistem fonksiyonları yerine
+            doğrudan göstericilerle bellek üzerinde işlem yapılmış olur. read fonksiyonu ile dosyanın bir kısmını okumak isteyelim:
+
+                result = read(fd, buf, size);
+
+            Burada genellikle işletim sistemlerinde arka planda iki işlem yapılmaktadır: Önce dosyanın ilgili bölümü işletim sisteminin çekirdeği içerisindeki bir alana (bu alana buffer cache ya da page cache denilmektedir) çekilir. Sonra bu alandan bizim
+            belirttiğimiz alana aktarım yapılır. Halbuki bellek tabanlı dosyalarda genel olarak bu iki aktarım yerine dosya doğrudan prosesin bellek alanına map edilmektedir. Yani bu anlamda bellek tabanlı dosyalar hız ve bellek kazancı sağlamaktadır. Ayrıca
+            her read ve write işleminin kontrol edilme zorunluluğu da bellek tabanlı dosyalarda ortadan kalkmaktadır. Bir dosya üzerinde dosyanın farklı yerlerinden okuma ve yazma işlemlerinin sürekli yapıldığı durumlarda bellek tabanlı dosyalar klasik
+            read/write sistemine göre oldukça avantaj sağlamaktadır. Bu noktada kişilerin akıllarına şu soru gelmektedir? Biz bir dosyayı open ile açsak dosyanın tamamını read ile belleğe okusak sonra işlemleri bellek üzerinde yapsak sonra da write fonksiyonu
+            ile tek hamlede yine onları diske yazsak bu yöntemin bellek tabanlı dosyalardan bir farkı kalır mı? Bu soruda önerilen yöntem bellek tabanlı dosya çalışmasına benzemekle birlikte bellek tabanlı dosyalar bu sorudaki çalışma biçiminden farklıdır.
+            Birincisi, dosyanın tamamının belleğe okunması yine iki tamponun devreye girmesine yol açmaktadır. İkincisi, bellek tabanlı dosyaların bir mapping oluşturması ve dolayısıyla prosesler arasında etkin bir kullanıma yol açmasıdır. Yani örneğin iki
+            proses aynı dosyayı bellek tabanlı olarak açtığında işletim sistemi her proses için ayrı bir alan oluşturmamakta dosyanın parçalarını fiziksel bellekte bir yere yerleştirip o proseslerin aynı yerden çalışmasını sağlamaktadır. Bir dosya bellek
+            tabanlı (memory mapped) biçimde sırasıyla şu adımlardan geçilerek kullanılmaktadır:
+
+                -> Dosya open fonksiyonuyla açılır ve bir dosya betimleyicisi elde edilir. Örneğin:
+
+                    int fd;
+                    ...
+
+                    if ((fd = open("test.txt", O_RDWR)) == -1)
+                        exit_sys("open");
+
+                İleride de belirteceğimiz gibi dosyalar bellek tabanlı olarak yaratılamamakta ve dosyalara bellek tabanlı biçimde eklemeler yapılamamaktadır. Yani zaten var olan dosyalar bellek tabanlı biçimde kullanılabilirler.
+
+                -> Açılmış olan dosya mmap fonksiyonu ile prosesin sanal bellek alanına map edilir. Yani işlemler adeta önceki konuda gördüğümüz POSIX paylaşılan bellek alanlarına benzer bir biçimde yürütülmektedir. (Burada shm_open yerine open fonksiyonunun
+                kullanıldığını varsayabilirsiniz.) Mapping işleminde genellikle shared mapping (MAP_SHARED) tercih edilir. Eğer private mapping (MAP_PRIVATE) yapılırsa mapping yapılan alana yazma yapıldığında bu dosyaya yansıtılmaz, "copy on write" mekanizması
+                devreye girer. mmap fonksiyonun son iki parametresi dosya betimleyicisi ve dosyada bir offset belirtmektedir. İşte dosya betimleyicisi olarak açmış olduğumuz dosyanın betimleyicisini verebiliriz. Offset olarak da dosyanın neresini map edeceksek
+                oranın başlangıç offsetini verebiliriz. Mapping sırasında dosya göstericisinin konumunun bir önemi yoktur. Örneğin:
+
+                    char *maddr;
+                    struct stat finfo;
+                    ...
+
+                    if (fstat(fd, &finfo) == -1)
+                        exit_sys("fstat");
+
+                    if ((maddr = (char *)mmap(NULL, finfo.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) 
+                        exit_sys("mmap");
+
+                Burada biz önce dosyanın uzunluğunu fstat fonksiyonu ile elde ettik sonra da mmap fonksiyonu ile dosyanın hepsini shared mapping yaparak map ettik. Artık dosya bellektedir ve biz dosya işlemleri yerine gösterici işlemleri ile bellekteki dosyayı
+                kullanabiliriz. Örneğin:
+
+                    for (off_t i = 0; i < finfo.st_size; ++i)
+                        putchar(maddr[i]);
+
+                mapping işleminden sonra artık dosya betimleyicisi close fonksiyonuyla kapatılabilir. Yani kapatım için unmap işleminin beklenmesine gerek yoktur. 
+
+                -> Tıpkı POSIX paylaşılan bellek alanlarında olduğu gibi işimiz bittikten sonra yapılan mapping işlemini munmap fonksiyonu ile serbest bırakabiliriz. Eğer bu işlemi yapmazsak proses sonlandığında zaten map edilmiş alanlar otomatik olarak unmap
+                edilecektir. Örneğin:
+
+                    if (munmap(maddr, finfo.st_size) == -1)
+                        exit_sys("munmap");
+
+                -> Nihayet dosya betimleyicisi close fonksiyonuyla kapatılabilir. Yukarıda da belirttiğimiz gibi aslında map işlemi yapıldıktan sonra hemen de close fonksiyonu ile dosya betimleyicisini kapatabilirdik. Örneğin:
+
+                    close(fd);
+
+                Aşağıdaki örnekte komut satırından alınan dosya bellek tabanlı biçimde açılmış ve dosyanın içindekiler ekrana (stdout dosyasına) yazdırılmıştır. Aynı zamanda dosyanın başındaki ilk 6 karakter değiştirilmiştir. Programı çalıştırırken dosyanın
+                başındaki ilk 6 karakterin bozulacağına dikkat ediniz. 
+                    * Örnek 1,
+                        #include <stdio.h>
+                        #include <stdlib.h>
+                        #include <string.h>
+                        #include <fcntl.h>
+                        #include <sys/stat.h>
+                        #include <unistd.h>
+                        #include <sys/mman.h>
+
+                        void exit_sys(const char *msg);
+
+                        int main(int argc, char *argv[])
+                        {
+                            int fd;
+                            struct stat finfo;
+                            char *fmaddr;
+
+                            if (argc != 2) {
+                                fprintf(stderr, "wrong number of arguments!..\n");
+                                exit(EXIT_FAILURE);
+                            }
+
+                            if ((fd = open(argv[1], O_RDWR)) == -1)
+                                exit_sys("open");
+
+                            if (fstat(fd, &finfo) == -1)
+                                exit_sys("fstat");
+
+
+                            if ((fmaddr = (char *)mmap(NULL, finfo.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) 
+                                exit_sys("mmap");
+
+                            for (off_t i = 0; i < finfo.st_size; ++i)
+                                putchar(fmaddr[i]);
+                            putchar('\n');
+
+                            memcpy(fmaddr, "XXXXXX", 6);
+
+                            if (munmap(fmaddr, finfo.st_size) == -1)
+                                exit_sys("munmap");
+
+                            close(fd);
+
+                            return 0;
+                        }
+
+                        void exit_sys(const char *msg)
+                        {
+                            perror(msg);
+
+                            exit(EXIT_FAILURE);
+                        }
+
+            UNIX/Linux sistemlerindeki bellek tabanlı dosyaları (memory mapped files) açarken ve kullanırken bazı ayrıntılara dikkat edilmesi gerekir. Burada bu ayrıntılar üzerinde duracağız. 
+
+                -> Dosyayı bizim mmap fonksiyonundaki sayfa koruma özelliklerine uygun açmamız gerekmektedir. Örneğin biz dosyayı O_RDONLY modunda açıp buna ilişkin sayfaları mmap fonksiyonunda PROT_READ|PROT_WRITE olarak belirlersek mmap başarısız olacak ve
+                errno EACCESS değeri ile set edilecektir. Eğer biz dosyayı O_RDWR modunda açtığımız halde mmap fonksiyonunda yalnızca PROT_READ kullanırsak bu durumda dosyaya yazma hakkımız olsa da sayfa özellikleri "read only" olduğu için o bellek bölgesine
+                yazma yapılırken program SIGSEGV sinyali ile çökecektir. 
+
+                -> Bellek tabanlı dosyaların O_WRONLY modunda açılması probleme yol açabilmektedir. Çünkü böyle açılmış olan bir dosyanın mmap fonksiyonunda PROT_WRITE olarak map edilmesi gerekir. Halbuki Intel gibi bazı işlemcilerde PROT_WRITE zaten aynı
+                zamanda okuma izni anlamına da gelmektedir. Yani örneğin Intel'de PROT_READ diye bir sayfa özelliği yoktur. PROT_WRITE aslında PROT_READ|PROT_WRITE anlamına gelmektedir. Dolayısıyla biz dosyayı O_WRONLY modunda açıp mmap fonksiyonunda PROT_WRITE
+                özelliğini belirtirsek bu PROT_WRITE aynı zamanda okuma izni anlamına da geldiği için mmap başarısız olacak ve errno EACCESS değeri ile set edilecektir. POSIX standartlarında da bellek tabanlı dosyaların (aynı durum shm_open için de geçerli)
+                açılırken "read" özelliğinin olması gerektiği belirtilmiştir. Yani POSIX standartları da bellek tabanlı dosyaların O_WRONLY modda açılamayacağını açılırsa mmap fonksiyonun başarısız olacağını ve errno değerinin EACCESS olarak set edileceğini
+                belirtmektedir. 
+
+                -> Bir dosyanın uzunluğu 0 ise biz mmap fonksiyonunda length parametresini 0 yapamayız. Fonksiyon doğrudan başarısızlıkla sonlanıp errno değeri EINVAL olarak set edilmektedir. Yani 0 uzunlukta bir dosya map edilememektedir.
+                
+                -> Anımsanacağı gibi mmap fonksiyonunun offset parametresi Linux sistemlerinde sayfa uzunluğunun katlarında olması gerekiyordu (POSIX bunu "may require" biçimde belirtmiştir). Yani Linux'ta biz dosyayı zaten sayfa katlarından itibaren map
+                edebilmekteyiz. Bu durumda Linux'ta zaten map edilen adres sayfanın başında olmaktadır. 
+
+                -> Biz normal bir dosyayı büyütmek için dosya göstericisini EOF durumuna çekip yazma yapıyorduk. Ya da benzer işlemi truncate, ftruncate fonksiyonlarıyla da yapabiliyorduk. Halbuki bellek tabanlı olarak açılmış olan dosyalar bellek üzerinde
+                hiçbir biçimde büyütülememektedir. Biz bir dosyayı mmap fonksiyonu ile dosya uzunluğundan daha fazla uzunlukta map edebiliriz. Örneğin dosya 10000 byte uzunlukta olduğu halde biz dosyayı 20000 byte olarak map edebiliriz. Bu durumda dosyanın
+                sonundan o sayfanın sonuna kadarki alana biz istediğimiz gibi erişebiliriz. Dosyanın uzunluğu 10000 byte ise dosyanın son sayfasında dosyaya dahil olmayan 2288 byte bulunacaktır (3 * 4096 - 10000). İşte bizim bu son sayfadaki 2288 byte'a
+                erişmemizde hiçbir sakınca yoktur. Ancak bu sayfanın ötesinde erişim yapamayız. Yani bizim artık 3 * 4096 = 12288'den 20000'e kadarki alana erişmeye çalışmamamız gerekir. Eğer bu alana erişmeye çalışırsak SIGBUS sinyali oluşur ve prosesimiz
+                sonlandırılır. Pekiyi bir dosyanın uzunluğundan fazla yerin map edilmesinin bir anlamı olabilir mi? Daha önceden de belirttiğimiz gibi bellek tabanlı dosyalar bellek üzerinde büyütülemezler. Yani biz dosyayı uzunluğunun ötesinde map ederek
+                oraya yazma yapmak suretiyle dosyayı büyütemeyiz. Ancak dosyalar dışarıdan büyütülebilmektedir. 
+
+            Bellek tabanlı dosyaların çalışma mekanizmasının iyi anlaşılması için öncelikle dosya işlemlerinde read ve write işlemlerinin nasıl yapıldığı hakkında bilgi sahibi olunması gerekmektedir. Biz write POSIX fonksiyonuyla dosyaya bir yazma yaptığımızda
+            write fonksiyonu genellikle doğrudan bu işlemi yapan bir sistem fonksiyonunu çağırmaktadır. Örneğin Linux sistemlerinde write fonksiyonu, prosesi kernel moda geçirerek doğrudan sys_write isimli sistem fonksiyonunu çağırır. Pekiyi bu sys_write sistem
+            fonksiyonu ne yapmaktadır? Genellikle işletim sistemlerinde dosyaya yazma yapan sistem fonksiyonları hemen yazma işlemini diske yapmazlar. Önce kernel içerisindeki bir tampona yazma yaparlar. Bu tampona Linux sistemlerinde eskiden "buffer cache"
+            denirdi. Sonradan sistem biraz değiştirildi ve "page cache" denilmeye başlandı. İşte bu tampon sistemi işletim sisteminin bir "kernel thread'i" tarafından belli periyotlarla diske flush edilmektedir. Yani biz diske write fonksiyonu ile yazma
+            yaptığımızda aslında bu yazılanlar önce kernel içerisindeki bir tampona (Linux'ta page cache) yazılmakta ve işletim sisteminin bağımsız çalışan başka bir akışı tarafından çok bekletilmeden bu tamponlar diske flush edilmektedir. Pekiyi neden write
+            fonksiyonu doğrudan diske yazmak yerine önce bir tampona (page cache) yazmaktadır? İşte bunun amacı performansın artırılmasıdır. Bu konuya genel olarak "IO çizelgelemesi (IO scheduling)" denilmektedir. IO çizelgelemesi diske yazılacak ya da diskten
+            okunacak bilgilerin bazılarının bir araya getirilerek belli bir sırada işleme sokulması anlamına gelmektedir. (Örneğin biz dosyaya peşi sıra birkaç write işlemi yapmış olalım. Bu birkaç write işlemi aslında kernel içerisindeki page cache'e yapılacak 
+            ve bu page cache'teki sayfa tek hamlede işletim sistemi tarafından diske flush edilecektir.) Tabii işletim sisteminin arka planda bu tamponları flush eden kernel thread'i çok fazla beklemeden bu işi yapmaya çalışmaktadır. Aksi takdirde elektrik
+            kesilmesi gibi durumlarda bilgi kayıpları daha yüksek düzeyde olabilmektedir. Pekiyi biz write fonksiyonu ile yazma yaptığımızda mademki yazılanlar hemen diskteki dosyaya aktarılmıyor o halde başka bir proses tam bu işlemden hemen sonra open 
+            fonksiyonu ile dosyayı açıp ilgili yerden okuma yapsa bizim en son yazdıklarımızı okuyabilecek midir? POSIX standartlarına göre write fonksiyonu geri döndüğünde artık aynı dosyadan bir sonraki read işlemi ne olursa olsun write yapılan bilgiyi
+            okumalıdır. İşte işletim sistemleri zaten bir dosya açıldığında read işleminde de write işleminin kullandığı aynı tamponu kullanmaktadır. Bu tasarıma "unified file system" da denilmektedir. Bu tasarımdan dolayı zaten ilgili dosya üzerinde işlem yapan 
+            her proses işletim sistemi içerisindeki  aynı tamponları kullanmaktadır. Yani işletim sisteminin sistem fonksiyonları önce bu tamponlara bakmaktadır. Dolayısıyla bu tamponların o anda flush edilip edilmediğinin bir önemi kalmamaktadır. (Tabii bir proses
+            işletim sistemini bypass edip doğrudan disk sektörlerine erişirse bu durumda gerçekten henüz write fonksiyonu ile yazılanların dosyaya yazılmamış olduğunu görebilir.) Pekiyi biz bir dosyayı bellek tabanlı olarak açarak o bellek alanını güncellediğimizde
+            oradaki güncellemeler başka prosesler tarafından read işlemi sırasında görülecek midir? Ya da tam tersi olarak başka prosesler dosyaya write yaptığında bizim map ettiğimiz bellek otomatik bu yazılanları görecek midir? İşte POSIX standartları bunun
+            garantisini vermemiştir. POSIX standartlarında bellek tabanlı dosyanın bellek içeriğinde değişiklik yapıldığında bu değişikliğin diğer prosesler tarafından görülebilmesi için ya da diğer proseslerin yaptığı write işleminin bellek tabanlı dosyanın bellek
+            alanına yansıtılabilmesi için msync isimli bir POSIX fonksiyonunun çağrılması gerekmektedir. Her ne kadar POSIX standartları bu msync fonksiyonunun çağrılması gerektiğini belirtiyorsa da Linux gibi pek çok UNIX türevi sistem "unified file system" tasarımı
+            nedeniyle aslında msync çağrısına gereksinim duymamaktadır. Örneğin Linux'ta biz bir bellek tabanlı dosyayı map ettiğimizde aslında sayfa tablosunda bizim map ettiğimiz kısım doğrudan zaten işletim sisteminin tamponunu (page cache) göstermektedir. Yani
+            zaten Linux sistemlerinde bütün prosesler dosya işlemlerinde önce bu page cahche'e bakmaktadır. Dolayısıyla biz bellek tabanlı dosyanın bellekteki alanına yazma yaptığımızda diğer prosesler dosyayı bellek tabanlı açmamış olsa bile page cache olarak aynı
+            alana baçvuracaklarından dolayı bizim yazdıklarımızı hemen görecektir. Benzer biçimde başka bir proses dosyaya yazma yaptığında da aslında aynı tampona (page cache) yazma yapmaktadır. Ancak ne olursa olsun taşınabilir programların bu msync fonksiyonunu
+            aşağıda belirteceğimiz biçimde çağırması gerekmektedir. 
+                * Örnek 1, Aşağıdaki örnekte "sample.c" programı bir dosyayı bellek tabanlı olarak açıp onun başına bir şeyler yazıp beklemektedir. "mample.c" programı ise bir dosyanın ilk 32 karakterini ekrana (stdout dosyasına) yazdırmaktadır. Bu örnekten amaç
+                Linux sistemlerinde hiç msync çağırması yapılmadan bir bir prosesin bellek tabanlı dosyanın bellekteki alanına yazma yaptığında diğer bir prosesin dosyayı bellek tabanlı açmasa bile o değişikliği gördüğünün ispat edilmesidir. Programları "test.txt"
+                gibi örnek bir dosya oluşturup onun üzerinde farklı terminallerden çalıştırarak deneyebilirsiniz. Şöyleki:
+
+                    ./sample test.txt
+                    ./mample test.txt
+
+                Programın kodları aşağıdaki gibidir:
+                /* sample.c */
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <string.h>
+                    #include <fcntl.h>
+                    #include <sys/stat.h>
+                    #include <unistd.h>
+                    #include <sys/mman.h>
+
+                    void exit_sys(const char *msg);
+
+                    int main(int argc, char *argv[])
+                    {
+                        int fd;
+                        struct stat finfo;
+                        char *fmaddr;
+
+                        if (argc != 2) {
+                            fprintf(stderr, "wrong number of arguments!..\n");
+                            exit(EXIT_FAILURE);
+                        }
+
+                        if ((fd = open(argv[1], O_RDWR)) == -1)
+                            exit_sys("open");
+
+                        if (fstat(fd, &finfo) == -1)
+                            exit_sys("fstat");
+
+                        if ((fmaddr = (char *)mmap(NULL, finfo.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) 
+                            exit_sys("mmap");
+
+                        printf("press ENTER to write...\n");
+                        getchar();
+
+                        memcpy(fmaddr, "XXXXXX", 6);
+                        printf("press ENTER to exit...\n");
+                        getchar();
+
+                        if (munmap(fmaddr, finfo.st_size) == -1)
+                            exit_sys("munmap");
+
+                        close(fd);
+
+                        return 0;
+
+                    }
+
+                    void exit_sys(const char *msg)
+                    {
+                        perror(msg);
+
+                        exit(EXIT_FAILURE);
+                    }
+
+                /* mample.c */
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <fcntl.h>
+                    #include <unistd.h>
+
+                    void exit_sys(const char *msg);
+
+                    int main(int argc, char *argv[])
+                    {
+                        int fd;
+                        char buf[32 + 1];
+                        ssize_t result;
+
+                        if (argc != 2) {
+                            fprintf(stderr, "wrong number of arguments!..\n");
+                            exit(EXIT_FAILURE);
+                        }
+
+                        if ((fd = open(argv[1], O_RDONLY)) == -1)
+                            exit_sys("open");
+
+                        if ((result = read(fd, buf, 32)) == -1)
+                            exit_sys("read");
+                        
+                        for (ssize_t i = 0; i < result; ++i)
+                            putchar(buf[i]);
+                        putchar('\n');
+                        
+                        close(fd);
+
+                        return 0;
+                    }
+
+                    void exit_sys(const char *msg)
+                    {
+                        perror(msg);
+
+                        exit(EXIT_FAILURE);
+                    }
+
+            Yukarıda da belirttiğimiz gibi her ne kadar Linux gibi "unified file system" tasarımını kullanan işletim sistemlerinde msync fonksiyonu gerekmiyorsa da bellek tabanlı dosyada yapılan değişikliklerin diskteki dosyaya yansıtılması, diskteki dosyada
+            yapılan değişikliklerin bellek tabanlı dosyanın bellek alanına yansıtılması için msync isimli POSIX fonksiyonun çağrılması gerekmektedir. msync fonksiyonunun prototipi şöyledir:
+
+                #include <sys/mman.h>
+                int msync(void *addr, size_t len, int flags);
+
+            Fonksiyonun birinci parametresi flush edilecek bellek tabanlı dosyanın bellek adresini, ikinci parametresi bunun uzunluğunu belirtmektedir. POSIX standartlarına göre birinci parametrede belirtilen adresin "sayfa katlarında olması zorunlu değildir, ancak
+            işletim sistemi bunu zorunlu yapabilir (may require)". Linux sistemlerinde bu adresin sayfa katlarında olması zorunlu tutulmuştur. Fonksiyonun ikinci parametresi flush edilecek byte miktarını belirtmektedir. Burada belirtilen byte miktarı ve girilen adresi
+            kapsayan tüm sayfalar işleme sokulmaktadır. (Örneğin birinci parametrede belirtilen adres sayfa katlarında olsun. Biz ikinci parametre için 7000 girsek sayfa uzunluğu 4K ise sanki 8192 girmiş gibi etki oluşacaktır.) Fonksiyonun son parametresi flush
+            işleminin yönünü belirtmektedir. Bu parametre aşağıdaki bayraklardan yalnızca birini alabilir:
+
+                -> MS_SYNC: Burada yön bellekten diske doğrudur. Yani biz bellek tabanlı dosyanın bellek alanında değişiklik yaptığımızda bunun diskteki dosyaya yansıtılabilmesi için MS_SYNC kullanabiliriz. Bu bayrak aynı zamanda msync fonksiyonu geri döndüğünde
+                flush işleminin bittiğinin garanti edilmesini sağlamaktadır. Yani bu bayrağı kullandığımızda msync flush işlemi bitince geri dönmektedir.
+
+                -> MS_ASYNC: MS_SYNC bayrağı gibidir. Ancak bu bayrakta flush işlemi başlatılıp msync fonksiyonu hemen geri dönmektedir. Yani bu bayrakta msync geri döndüğünde flush işlemi başlatılmıştır ancak bitmiş olmak zorunda değildir. 
+
+                -> MS_INVALIDATE: Buradaki yön diskten belleğe doğrudur. Yani başka bir proses diskteki dosyayı güncellendiğinde bu güncellemenin bellek tabanlı dosyanın bellek alanına yansıtılması sağlanmaktadır. 
+
+            munmap işlemi ile bellek tabanlı dosyanın bellek alanı unmap edilirken zaten msync işlemi yapılmaktadır. Benzer biçimde proses munmap yapmadan sonlanmış olsa bile sonlanma sırasında munmap işlemi işletim sistemi tarafından yapılmakta ve bu flush işlemi
+            de gerçekleştirilmektedir. Fonksiyon başarı durumunda 0 değerine, başarısızlık durumunda -1 değerine geri dönmektedir. Bu durumda biz POSIX standartlarına uygunluk bakımından örneğin bir bellek tabanlı dosyanın bellek alanına bir şeyler yazdığımızda
+            o alanın flush edilmesi için MS_SYNC ya da MS_ASYNC bayraklarıyla msync çağrısını yapmamız gerekir:
+
+                if ((maddr = (char *)mmap(NULL, finfo.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) 
+                    exit_sys("mmap");
+
+                memcpy(maddr, "ankara", 6);
+
+                if (msync(maddr, finfo.st_size, MS_SYNC) == -1)		/* bellekteki değişiklikler diske yansıtılıyor */
+                    exit_sys("msync");
+
+            Yine POSIX standartlarına uygunluk bakımından dışarıdan bir prosesin bellek tabanlı dosyada değişiklik yapması durumunda onun bellek tabanlı dosyanın bellek alanına yansıtılabilmesi için MS_INVALIDATE bayrağı ile msync fonksiyonunun çağrılması
+            gerekmektedir. Örneğin:
+
+                if ((maddr = (char *)mmap(NULL, finfo.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) 
+                    exit_sys("mmap");
+
+                /* başka bir proses dosya üzerinde değişiklik yapmış olsun */
+
+                if (msync(maddr, finfo.st_size, MS_INVALIDATE) == -1)		/* diskteki değişiklikler belleğe yansıtılıyor */
+                    exit_sys("msync");
+
+            msync fonksiyonunda yalnızca tek bir bayrak kullanılabilmektedir. Bu nedenle iki işlemi MS_SYNC|MS_INVALIDATE biçiminde birlikte yapmaya çalışmayınız. 
+                * Örnek 1, Aşağıda msync fonksiyonunun kullanımına ilişkin bir örnek verilmiştir. 
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <string.h>
+                    #include <fcntl.h>
+                    #include <sys/stat.h>
+                    #include <unistd.h>
+                    #include <sys/mman.h>
+
+                    void exit_sys(const char *msg);
+
+                    int main(int argc, char *argv[])
+                    {
+                        int fd;
+                        struct stat finfo;
+                        char *fmaddr;
+
+                        if (argc != 2) {
+                            fprintf(stderr, "wrong number of arguments!..\n");
+                            exit(EXIT_FAILURE);
+                        }
+
+                        if ((fd = open(argv[1], O_RDWR)) == -1)
+                            exit_sys("open");
+
+                        if (fstat(fd, &finfo) == -1)
+                            exit_sys("fstat");
+
+                        if ((fmaddr = (char *)mmap(NULL, finfo.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0)) == MAP_FAILED) 
+                            exit_sys("mmap");
+
+                        printf("press ENTER to write...\n");
+                        getchar();
+
+                        memcpy(fmaddr, "XXXXXX", 6);
+                        
+                        if (msync(fmaddr, 4096, MS_SYNC) == -1)
+                            exit_sys("msync");
+                        
+                        if (munmap(fmaddr, finfo.st_size) == -1)
+                            exit_sys("munmap");
+
+                        close(fd);
+
+                        return 0;
+
+                    }
+
+                    void exit_sys(const char *msg)
+                    {
+                        perror(msg);
+
+                        exit(EXIT_FAILURE);
+                    }
+
+            >>>> Mesaj Kuyrukları : Diğer bir proseslerarası haberleşme yöntemi de "mesaj kuyrukları (message queues)" denilen yöntemdir. Mesaj kuyrukları UNIX/Linux (ve macOS) sistemlerinde kullanılan bir yöntemdir. UNIX/Linux sistemlerinde mesaj kuyrukları tıpkı
+            paylaşaılan bellek alanlarında olduğu gibi iki farklı fonksiyon grubuyla kullanılabilmektedir. Eski mesaj kuyruklarına genellikle "Sistem 5 mesaj kuyrukları" denilmektedir. Modern mesaj kuyruklarına POSIX mesaj kuyrukları denir. POSIX mesaj kuyrukları
+            90'lı yılların ortalarında tasarlanmıştir. Tabii aslında her iki grup fonksiyon da POSIX standartlarında bulunmaktadır. Sistem 5 mesaj kuyrukları çok eskiden beri var olduğu için geniş bir taşınabilirliğe sahiptir. Bugün programcılar her iki mesaj
+            kuyruklarını da kullanmaktadır. Biz kursumuzda yalnızca POSIX mesaj kuyruklarını göreceğiz. POSIX mesaj kuyrukları şöyle kullanılmaktadır:
+
+                -> İki proses de (daha fazla proses de olabilir) mesaj kuyruğunu mq_open fonksiyonuyla ortak bir isim altında anlaşarak açar. mq_open fonksiyonunun prototipi şöyledir:
+
+                    #include <mqueue.h>
+                    mqd_t mq_open(const char *name, int oflag, ...);
+
+                Fonksiyon ya iki argümanla ya da dört argümanla çağrılmaktadır. Eğer mesaj kuyruğu zaten varsa fonksiyon iki argümanla çağrılır. Ancak mesaj kuyruğunun yaratılması gibi bir durum söz konusu ise fonksiyon dört argümanla çağrılır. Eğer mesaj kuyruğunun
+                yaratılması söz konusu ise son iki parametreye sırasıyla IPC nesnesinin erişim hakları ve "özellikleri (attribute)" girilmelidir. Yani mesaj kuyruğu yaratılacaksa adeta fonksiyonun parametrik yapısının aşağıdaki gibi olduğu varsayılmalıdır:
+
+                    mqd_t mq_open(const char *name, int oflag, mode_t mode, const struct mq_attr *attr);
+
+                Fonksiyonun birinci parametresi IPC nesnesinin kök dizindeki dosya ismi gibi uydurulmuş olan ismini belirtir. İkinci parametre açış bayraklarını belirtmektedir. Burada open fonksiyonundaki bayrakların bazıları kullanılmaktadır. Açış bayrakları
+                aşağıdakilerden yalnızca birini içermek zorundadır:
+
+                    O_RDONLY
+                    O_WRONLY
+                    O_RDWR
+
+                Açış bayraklarına aşağıdaki değerlerin bir ya da birden fazlası da bit OR işlemiyle eklenebilir:
+
+                    O_CREAT
+                    O_EXCL
+                    O_NONBLOCK
+
+                O_CREAT bayrağı yine "yoksa yarat, varsa olanı aç" anlamına gelmektedir. O_EXCL yine O_CREAT birlikte kullanılabilir. Eğer nesne zaten varsa bu durumda fonksiyonun başarısız olmasını sağlar. O_NONBLOCK blokesiz okuma-yazma yapmak için kullanılmaktadır. 
+                Eğer açış bayrağında O_CREAT belirtilmişse bu durumda programcının fonksiyona iki argüman daha girmesi gerekir. Tabii eğer nesne varsa bu iki argüman zaten kullanılmayacaktır. Yani bu argüman IPC nesnesi yaratılacaksa (yoksa) kullanılmaktadır. Mesaj
+                kuyruğu yaratılırken erişim haklarını tıpkı dosyalarda olduğu gibi kuyruğu yaratan kişi S_IXXX sembolik sabitleriyle (ya da 2008 sonrasında doğrudan sayısal biçimde) vermelidir. Eğer mesaj kuyruğu yaratılacaksa son parametre mq_attr isimli yapı türünden
+                bir nesnenin adresi biçiminde girilmelidir. mq_attr yapısı şöyle bildirilmiştir:
+
+                    struct mq_attr {
+                        long mq_flags;       /* Flags: 0 or O_NONBLOCK */
+                        long mq_maxmsg;      /* Max. # of messages on queue */
+                        long mq_msgsize;     /* Max. message size (bytes) */
+                        long mq_curmsgs;     /* # of messages currently in queue */
+                    };
+
+                Yapının mq_flags parametresi yalnızca O_NONBLOCK içerebilir. max_msg elemanı kuyruktaki tutulacak maksimum mesaj sayısını belirtmektedir. Yapının mq_msgsize elemanı bir mesajın maksimum uzunluğunu belirtmektedir. mq_curmsgs elemanı ise o anda kuyruktaki
+                mesaj sayısını belirtmektedir. Programcı mesaj kuyruğunu yaratırken yapının mq_maxmsg ve mq_msgsize elemanlarına uygun değerler girip mesaj kuyruğunun istediği gibi yaratılmasını sağlayabilir. Yani mesaj kuyruğu yaratılırken programcı mq_attr yapısının
+                yalnızca mq_maxmsg ve mq_msgsize elemanlarını doldurur. Yapının diğer elemanları mq_open tarafından dikkate alınmamaktadır. Ancak bu özellik parametresi NULL adres biçiminde de geçilebilir. Bu durumda mesaj kuyruğu default değerlerle yaratılır. Bu default
+                değerler değişik sistemlerde değişik biçimlerde olabilir. Linux sistemlerinde genel olarak default durumda maksimum mesaj mq_maxmsg değeri 10, mq_msgsize değeri ise 8192 alınmaktadır. mq_open fonksiyonunda kuyruk özelliklerini girerken mq_maxmsg ve
+                mq_msgsize elemanlarına girilecek değerler için işletim sistemleri alt ve üst limit belirlemiş olabilirler. Eğer yapının bu elemanları bu limitleri aşarsa mq_open fonksiyonu başarısız olur ve errno değişkeni EINVAL olarak set edilir. Örneğin Linux
+                sistemlerinde sıradan prosesler (yani root olmayan prosesler) mq_maxmsg değerini 10'un yukarısına çıkartamamaktadır. Ancak uygun önceliğe sahip prosesler bu değeri 10'un yukarısında belirleyebilmektedir. Ancak POSIX standartları bu default limitler
+                hakkında bir şey söylememiştir. Linux sistemlerinde sonraki paragraflarda açıklanacağı gibi bu limitler proc dosya sisteminden elde edilebilmektedir. mq_open fonksiyonu başarı durumunda yaratılan mesaj kuyruğunu temsil eden betimleyici değeriyle,
+                başarısızlık durumunda -1 değeriyle geri dönmektedir. Fonksiyonun geri döndürdüğü "mesaj kuyruğu betimleyicisi (message queue descriptor)" diğer fonksiyonlarda bir handle değeri gibi kullanılmaktadır. Linux çekirdeği aslında mesaj kuyruklarını tamamen
+                birer dosya gibi ele almaktadır. Yani mq_open fonksiyonu Linux sistemlerinde dosya betimleyici tablosunda bir betimleyici tahsis edip ona geri dönmektedir. Ancak POSIX standartları, fonksiyonun geri dönüş değerini mqd_t türüyle temsil etmiştir. Bu durum
+                değişik çekirdeklerde mesaj kuyruklarının dosya sisteminin dışında başka biçimlerde de gerçekleştirilebileceği anlamına gelmektedir. POSIX standartlarına göre mqd_t herhangi bir tür olarak (yapı da dahil olmak üzere) 
+                <mqueue.h> dosyasında typedef edilebilir. 
+
+                -> POSIX mesaj kuyruğuna mesaj yollamak için mq_send fonksiyonu kullanılmaktadır. Fonksiyonun prototipi şöyledir:
+
+                    #include <mqueue.h>
+                    int mq_send(mqd_t mqdes, const char *msg_ptr, size_t msg_len, unsigned msg_prio);
+
+                Fonksiyonun birinci parametresi mesaj kuyruğunun betimleyicisini belirtir. Fonksiyonun ikinci parametresi mesajın bulunduğu dizin'in adresini almaktadır. Ancak bu parametrenin void bir adres olmadığına dikkat ediniz. Eğer mesaj başka türlere ilişkinse 
+                tür dönüştürmesinin yapılması gerekmektedir. Üçüncü parametre gönderilecek mesajın uzunluğunu belirtir. Dördüncü parametre mesajın öncelik derecesini belirtmektedir. Bu öncelik derecesi >= 0 bir değer olarak girilmelidir. POSIX mesaj kuyruklarında
+                öncelik derecesi yüksek olan mesajlar FIFO sırasına göre önce alınmaktadır. Bu mesaj kuyruklarının klasik Sistem 5 mesaj kuyruklarında olduğu gibi belli bir öncelik derecesine sahip mesajları alabilme yeteneği yoktur. Buradaki öncelik derecesinin
+                <limits.h> içerisindeki MQ_PRIO_MAX değerinden küçük olması gerekmektedir. Bu değer ise işletim sistemlerini yazanlar tarafından belirlenmektedir. Ancak bu değer _POSIX_MQ_PRIO_MAX (32) değerinden düşük olamaz. Yani başka bir deyişle buradaki desteklenen
+                değer 32'den küçük olamamaktadır. (Mevcut Linux sistemlerinde bu değer 32768 biçimindedir.) Fonksiyon başarı durumunda 0 değerine, başarısızlık durumunda -1 değerine geri döner ve errno değişkeni uygun biçimde set edilir. POSIX mesaj kuyruklarının da
+                izleyen paragraflarda açıklanacağı üzere belli limitleri vardır. Eğer mesaj kuyruğu dolarsa mq_send fonksiyonu bloke olmaktadır. Ancak açış sırasında O_NONBLOCK bayrağı belirtilmişse mq_send kuyruk doluysa bloke olmaz. Kuyruğa hiçbir şey yazmadan
+                başarısızlıkla (-1 değeriyle) geri döner ve errno EAGAIN değeri ile set edilir. Örneğin:
+
+                    for (int i = 0; i < 100; ++i) {
+                        if (mq_send(mqdes, (const char *)&i, sizeof(int), 0) == -1)
+                            exit_sys("mq_send");
+                    }
+
+                Burada 0'dan 100'e kadar 100 tane int değer mesaj kuyruğuna mesaj olarak yazılmıştır. Mesaj kuyruklarının kendi içerisinde bir senkronizasyon da içerdiğine dikkat ediniz. Kuyruğa yazan taraf kuyruk dolarsa (Linux'taki default değerin 10 olduğunu
+                anımsayınız) blokede beklemektedir. Ta ki diğer taraf kuyruktan mesajı alıp kuyrukta yer açana kadar.
+
+                -> POSIX mesaj kuyruklarından mesaj almak için mq_receive fonksiyonu kullanılmaktadır. Fonksiyonun prototipi şöyledir:
+
+                    #include <mqueue.h>
+                    ssize_t mq_receive(mqd_t mqdes, char *msg_ptr, size_t msg_len, unsigned *msg_prio);
+
+                Fonksiyonun birinci parametresi mq_open fonksiyonundan elde edilen mesaj kuyruğu betimleyicisidir. İkinci parametre mesajın yerleştirileceği adresi belirtmektedir. Yine bu parametrenin void bir gösterici olmadığına char türden bir gösterici olduğuna dikkat 
+                ediniz. Yani char türünden farklı bir adres buraya geçilecekse tür dönüştürmesi uygulanmalıdır. Üçüncü parametre, ikinci parametredeki mesajın yerleştirileceği alanın uzunluğunu belirtir. Ancak dikkat edilmesi gereken nokta buradaki uzunluk değerinin mesaj
+                kuyruğundaki mq_msgsize değerinden küçük olmaması gerektiğidir. Eğer bu parametreye girilen değer mesaj kuyruğuna ilişkin mq_msgsize değerinden küçük ise fonksiyon hemen başarısız olmaktadır. Bu durumda errno değişkeni EMSGSIZE değeri ile set edilmektedir.
+                Pekiyi bu değeri mq_receive fonksiyonunu uygulayacak programcı nasıl bilecektir? Eğer kuyruğu kendisi yaratmışsa ve yaratım sırasında mq_attr parametresiyle özellik belirtmişse programcı zaten bunu biliyor durumdadır. Ancak genellikle mq_receive fonksiyonunu
+                kullanan programcılar bunu bilmezler. Çünkü genellikle kuyruk mq_receive yapan programcı tarafından yaratılmamıştır ya da kuyruk default özelliklerle yaratılmıştır. Bu durumda mecburen programcı mq_getattr fonksiyonu ile bu bilgiyi elde etmek zorunda kalır.
+                Tabii bu işlem programın çalışma zamanında yapıldığına göre programcının mesajın yerleştirileceği alanı da malloc fonksiyonu ile dinamik bir biçimde tahsis etmesi gerekmektedir. mq_receive fonksiyonun son parametresi kuyruktan alınan mesajın öncelik
+                derecesinin yerleştirileceği unsigned int türden nesnenin adresini almaktadır. Ancak bu parametre NULL adres biçiminde geçilebilir. Bu durumda fonksiyon mesajın öncelik derecesini yerleştirmez. Fonksiyon başarı durumunda kuyruktaki mesajın uzunluğu ile,
+                başarısızlık durumunda -1 ile geri dönmektedir ve errno değişkeni uygun biçimde set edilmektedir. Örneğin:
+
+                    char buf[65536];
+                    ...
+                    if (mq_receive(mqdes, buf, 65536, NULL) == -1)
+                            exit_sys("mq_receive");
+
+                Burada biz mesajın önceliğini almak istemedik. Bu nedenle son parametreye NULL adres geçtik. Tampon uzunluğunu öylesine büyük bir değer olarak uydurduk. Aslında yukarıda da belirttiğimiz gibi mq_receive uyguladığımız noktada bizim tampon uzunluğunu biliyor
+                durumda olmamız gerekir. 
+
+                -> Pekiyi POSIX mesaj kuyruklarında mesaj haberleşmesi nasıl sonlandırılacaktır? Burada karşı taraf betimleyiciyi kapattığında diğer taraf bunu anlayamamaktadır. O halde heberleşmenin sonlanması için gönderen tarafın özel bir mesajı göndermesi ya da 0
+                uzunlukta bir mesajı göndermesi gerekir. Eğer 0 uzunluklu mesaj gönderilirse alan tarafta mq_receive fonksiyonu 0 ile geri dönecek ve alan taraf haberleşmenin bittiğini anlayabilecektir.
+
+                -> POSIX mesaj kuyruğu ile işlemler bitince programcı mesaj kuyruğunu mq_close fonksiyonu ile kapatmalıdır. Fonksiyonun prototipi şöyledir:
+
+                    #include <mqueue.h>
+                    int mq_close(mqd_t mqdes);
+
+                Fonksiyon parametre olarak mesaj kuyruğu betimleyicicisini alır. Başarı durumunda 0 değerine, başarısızlık durumunda -1 değerine geri döner. Programcı her şeyi doğru yaptığına inanıyorsa başarının kontrol edilmesine gerek yoktur. Tabii eğer programcı mq_close
+                fonksiyonunu hiç kullanmazsa proses bittiğinde otomatik olarak betimleyici kapatılmaktadır.
+
+                -> POSIX mesaj kuyrukları mq_unlink fonksiyonu ile silinmektedir. Tabii yukarıda da belirttiğimiz gibi mesaj kuyruğu açıkça silinmezse reboot edilene kadar (kernel persistant) yaşamaya ve içerisindeki mesajları tutmaya devam etmektedir. Bir POSIX mesaj kuyruğu
+                mq_unlink fonksiyonu ile silindiğinde halen mesaj kuyruğunu kullanan programlar varsa onlar kullanmaya devam ederler. Mesaj kuyruğu gerçek anlamda son mesaj kuyruğu betimleyicisi kapatıldığında yok edilmektedir. mq_unlink fonksiyonunun prototipi şöyledir:
+
+                    #include <mqueue.h>
+                    int mq_unlink(const char *name);
+
+                Fonksiyon mesaj kuyruğunun ismini alır. Başarı durumunda 0 değerine, başarısızlık durumunda -1 değerine geri döner. Mesaj kuyruğunu, kuyruğu yaratan tarafın silmesi en normal durumdur. Ancak kuyruğu kimin yarattığı bilinmiyorsa taraflardan biri 
+                kuyruğu silebilir. 
+                    * Örnek 1, Aşağıda tipik bir POSIX mesaj kuyruğu örneği verilmiştir. Bu örnekte "prog1" programı stdin dosyasındna okuduklaırnı mesaj kuyruğuna yazmaktadır. "prog2" programı da mesaj kuyruğdan mesajları alarak stdout dosyasına yazmaktadır. "prog1"
+                    programı "quit" mesajını kuyruğa yazdıktan sonra işlemini sonlandırmaktadır. Benzer biçimde "prog2" programı da bu mesajı aldıktan sonra işlemini sonlandırır. 
+                        /* prog1.c */
+                            #include <stdio.h>
+                            #include <stdlib.h>
+                            #include <string.h>
+                            #include <mqueue.h>
+
+                            #define MESSAGE_QUEUE_NAME      "/TestMessageQueue"
+                            #define BUFFER_SIZE             8192
+
+                            void exit_sys(const char *msg);
+
+                            int main(void)
+                            {
+                                mqd_t mqd;
+                                char buf[BUFFER_SIZE];
+                                char *str;
+
+                                if ((mqd = mq_open(MESSAGE_QUEUE_NAME, O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH, NULL)) == -1)
+                                        exit_sys("mq_open");
+                                
+                                for (;;) {
+                                    printf("Message:");
+                                    if (fgets(buf, BUFFER_SIZE, stdin) == NULL)
+                                        continue;
+                                    if ((str = strchr(buf, '\n')) != NULL)
+                                        *str = '\0';
+
+                                    if (mq_send(mqd, buf, strlen(buf), 0) == -1)
+                                        exit_sys("mq_send");
+
+                                    if (!strcmp(buf, "quit"))
+                                        break;
+                                }
+
+                                mq_close(mqd);
+
+                                if (mq_unlink(MESSAGE_QUEUE_NAME) == -1)
+                                    exit_sys("mq_unlink");
+
+                                return 0;
+                            }
+
+                            void exit_sys(const char *msg)
+                            {
+                                perror(msg);
+
+                                exit(EXIT_FAILURE);
+                            }
+
+                        /* prog2.c */
+                            #include <stdio.h>
+                            #include <stdlib.h>
+                            #include <string.h>
+                            #include <mqueue.h>
+
+                            #define MESSAGE_QUEUE_NAME      "/TestMessageQueue"
+                            #define BUFFER_SIZE             8192
+
+                            void exit_sys(const char *msg);
+
+                            int main(void)
+                            {
+                                mqd_t mqd;
+                                char buf[BUFFER_SIZE];
+                                ssize_t result;
+                                
+                                if ((mqd = mq_open(MESSAGE_QUEUE_NAME, O_RDONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH, NULL)) == -1)
+                                    exit_sys("mq_open");
+
+                                for (;;) {
+                                    if ((result = mq_receive(mqd, buf, BUFFER_SIZE, NULL)) == -1)
+                                        exit_sys("mq_receive");
+                                    buf[result] = '\0';
+                                    if (!strcmp(buf, "quit"))
+                                        break;
+                                    printf("%s\n", buf);
+                                }
+
+                                mq_close(mqd);
+
+                                return 0;
+
+                            }
+
+                            void exit_sys(const char *msg)
+                            {
+                                perror(msg);
+
+                                exit(EXIT_FAILURE);
+                            }
+
+        >>> Windows Sistemlerinde: 
+            >>>> Boru Haberleşmesi : UNIX/Linux sistemindekilere benzer bir biçimde yapılmaktadır. Bu sistemlerde de borular "isimsiz (anonymous)" ve "isimli (named)" olmak üzere ikiye ayrılmaktadır.
+                >>>>> İsimli Boru Haberleşmesi : İki farklı Windows makinelerindeki proseslerin haberleşmesi için de kullanılabilmektedir. Bu nedenle Windows sistemlerindeki isimli borular bazı ayrıntılara sahiptir. Biz bu kursumuzda
+                Windows sistemlerindeki isimli borular üzerinde durmayacağız. Bu konu "Windows Sistem Programlama" kurslarında ele alınmaktadır.
+
+                >>>>> İsimsiz Boru Haberleşmesi : İsimsiz borular yine üst ve alt proseslerin haberleşmesinde kullanılmaktadır. Bu sistemlerde fork fonksiyonun olmadığını CreateProcess API fonksiyonunun adresta fork/exec ikilisi gibi bir
+                işleve sahip olduğunu anımsayınız. Dolayısıyla bu sistemlerde bizim alt prosese boruların handle değerlerini de geçirmemiz gerekir. Windows sistemlerinde üst ve alt prosesler arasında isimsiz boru haberleşmesi tipik olarak
+                şu adımlardan geçilerek gerçekleştirilmektedir:
+
+                    -> Üst proses boruyu CreatePipe isimli API fonksiyonuyla yaratır. Fonksiyonun prototipi şöyledir:
+
+                        BOOL CreatePipe(
+                            PHANDLE               hReadPipe,
+                            PHANDLE               hWritePipe,
+                            LPSECURITY_ATTRIBUTES lpPipeAttributes,
+                            DWORD                 nSize
+                        );
+
+                    Fonksiyonun birinci ve ikinci parametresi boruya yazma yapmakta kullanılacak ve borudan okuma yapmakta kullanılacak HANDLE değerlerinin yerleştirileceği nesnelerin adreslerini almaktadır. Windows sistemlerinde borular çift
+                    yönlüdür. Fonksiyonun üçüncü parametresi yaratılan boru nesnesinin güvenlik bilgilerini içermektedir. Bu patametre NULL geçilebilir. Son parametre borunun byte cinsinden uzunluğunu belirtmektedir. Bu parametre için girilecek
+                    değer yalnızca bir ipucu (hint) anlamındadır. Bu parametreye 0 girilirse bu durumda boru default uzunlukla yaratılmaktadır. Fonksiyon başarı durumunda sıfır dışı bir değre, başarısızlık durumunda sıfır değerine geri dönmektedir. 
+
+                    -> Borudan okuma için ReadFile fonksiyonu, boruya yazma için WriteFile API fonksiyonu kullanılmaktadır. Bu fonksiyonları zaten daha önce görmüştük. ReadFile fonksiyonu ile borudan okuma yapılmak istendiğinde eğer boruda hiçbir
+                    bte yoksa ReadFile blokede bekler. Benzer biçimde WriteFile fonksiyonu ile boruya yazma yapılırken eğer boruda yazılmak istenen kadar boş yer yoksa bu bilgilerin hepsinin yazılabilmesi için gerekli alan açılana kadar WriteFile
+                    bloke oluşturmaktadır. Buradaki davranış UNIX/Linux sistemlerindeki write ve read fonksiyonlaırnın davranışların gibidir. Yine haberleşme yazan tarafın boruyu CloseHandle fonksiyonu ile kapatmasıyla sonlandırılmalıdır. Bu durumda
+                    okuyan taraf önce boruda kalanları okur, sonra ReadFile başarısız olarak 0 ile geri döner. Okuyan taraf da boruyu kapatır. Eğer önce okuyan taraf boruyu kapatırsa (bu normal bir durum değildir) bu durumda yazan taraf boruya yazma
+                    yapmak istediğinde WriteFile fonksiyonu başarısız olmaktadır. ReadFile ya da WriteFile fonksiyonlarında karşı taraf boruyu kapattığından dolayı bu fonksiyonlar başarısız olmuşsa GetLastError fonksiyonu ERROR_BROKEN_PIPE değerini
+                    vermektedir. 
+
+                    -> Windows sistemlerinde üst prosesteki HANDLE değerleri alt prosese default durumda aktarılmamaktadır. (Halbuki UNIX/Linux sistemlerinde default durumda üst prosesin betimeleyicilerinin exec işlemi sırasında korunduğunu
+                    anımsayınız.) Eğer üst prosesin HANDLE değerlerinin alt prosese aktarılması isteniyorsa handle üzerinde SetHandleInformation fonksiyonu ile aşağda çağrı uygulanmalıdır:
+
+                        if (!SetHandleInformation(handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+                            ExitSys(TEXT("CreatePipe"));
+
+                    Ayrıca aktarımın yapıması için ana şalter görevinde olan CreateProcess fonksiyonundaki bInheritHandles parametresinin TRUE olarak geçilmesi gerekmektedir. 
+
+                    -> Artık hangi prosesin boruya yazma yapacağına, hangisinin buradan yazma yapacağına karar verilir. Yine her iki proses kullanmadıkları betimelyicileri kapatmalıdır. 
+                    
+                    -> CreateProses fonksiyonu ile alt proses yaratılır. Ancak boru HANDLE değerinin alt prosese komut satırı argümanlarıyla aktarılması gerekir. 
+
+                Aşağıdaki örnekte bir proses yukarıda belirtilen adımları uygulayarak alt prosesle boru haberleşmesi yapmaktadır. 
+                    * Örnek 1,
+                        /* Parent.c */
+                            #include <stdio.h>
+                            #include <stdlib.h>
+                            #include <windows.h>
+
+                            #define CHILD_PATH	"Child.exe"
+
+                            void ExitSys(LPCSTR lpszMsg);
+
+                            int main(void)
+                            {
+                                HANDLE hPipeRead, hPipeWrite;
+                                DWORD dwWritten, dwRead;
+                                char args[4096];
+                                STARTUPINFO si = { sizeof(STARTUPINFO) };
+                                PROCESS_INFORMATION pi;
+
+                                if (!CreatePipe(&hPipeRead, &hPipeWrite, NULL, 0))
+                                    ExitSys("CreatePipe");
+
+                                if (!SetHandleInformation(hPipeRead, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT))
+                                    ExitSys("SetHandleInformation");
+
+                                sprintf(args, "%s %p", CHILD_PATH, hPipeRead);
+                                if (!CreateProcess(NULL, args, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+                                    ExitSys("CreateProcess");
+
+                                CloseHandle(hPipeRead);
+
+                                for (int i = 0; i < 1000000; ++i)
+                                    if (!WriteFile(hPipeWrite, &i, sizeof(int), &dwWritten, NULL))
+                                        ExitSys("WriteFile");
+
+
+                                CloseHandle(pi.hProcess);
+                                CloseHandle(pi.hThread);
+
+                                CloseHandle(hPipeWrite);
+                                
+                                return 0;
+                            }
+
+                            void ExitSys(LPCSTR lpszMsg)
+                            {
+                                DWORD dwLastErr = GetLastError();
+                                LPTSTR lpszErr;
+
+                                if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                                    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                                    fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                                    LocalFree(lpszErr);
+                                }
+
+                                exit(EXIT_FAILURE);
+                            }
+
+                        /* Child.c */
+                            #include <stdio.h>
+                            #include <stdlib.h>
+                            #include <windows.h>
+
+                            void ExitSys(LPCSTR lpszMsg);
+
+                            int main(int argc, char *argv[])
+                            {
+                                HANDLE hPipeRead;
+                                DWORD dwRead;
+                                int val;
+
+                                if (argc != 2) {
+                                    fprintf(stderr, "wrong number of arguments!..\n");
+                                    exit(EXIT_FAILURE);
+                                }
+                                sscanf(argv[1], "%p", &hPipeRead);
+
+                                while (ReadFile(hPipeRead, &val, sizeof(int), &dwRead, 0)) {
+                                    printf("%d ", val);
+                                    fflush(stdout);
+                                }
+                                if (GetLastError() != ERROR_BROKEN_PIPE)
+                                    ExitSys("ReadFile");
+
+                                printf("\n");
+
+                                CloseHandle(hPipeRead);
+
+                                return 0;
+                            }
+
+                            void ExitSys(LPCSTR lpszMsg)
+                            {
+                                DWORD dwLastErr = GetLastError();
+                                LPTSTR lpszErr;
+
+                                if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                                    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                                    fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                                    LocalFree(lpszErr);
+                                }
+
+                                exit(EXIT_FAILURE);
+                            }
+
+            >>>> Paylaşılan Bellek Alanları: Windows'ta paylaşılan bellek alanları yoluyla proseslerarası haberleşme UNIX/Linux sistemlerindekine benzer biçimde yürütlmektedir. Tabii bu sistemlerde kullanılan API fonksiyonları farklıdır. Windows'ta
+            Paylaşılan bellek alanları tipik olarak şu aşamalardan geçilerek kullanılmaktadır:
+
+                -> Önce iki proses de CreateFileMapping API fonksiyonuyla bir "file mapping" nesnesi oluşturur. CreateFileMapping fonksiyonunun prototipi şöyledir:
+
+                    HANDLE CreateFileMappingA(
+                        HANDLE                hFile,
+                        LPSECURITY_ATTRIBUTES lpFileMappingAttributes,
+                        DWORD                 flProtect,
+                        DWORD                 dwMaximumSizeHigh,
+                        DWORD                 dwMaximumSizeLow,
+                        LPCSTR                lpName
+                    );
+
+                Fonksiyonun birinci parametresi bellek tabanlı dosya oluşturmak için kullanılmaktadır. Paylaşılan bellek alanları için bu parametre için INVALID_HANDLE_VALUE özel değeri geçilmelidir. İkinci parametre kernel nesnesinin güvenlik
+                bilgilerine ilişkindir. Bu parametre NULL geçilebilir. Üçüncü parametre file mapping nesnesinin koruma özelliklerini belirtir. Bu parametre aşağıdakilerden biri olarak girilmelidir:
+
+                    PAGE_EXECUTE_READ
+                    PAGE_EXECUTE_READWRITE
+                    PAGE_EXECUTE_WRITECOPY
+                    PAGE_READONLY
+                    PAGE_READWRITE
+                    PAGE_WRITECOPY
+
+                Burada PAGE_READONLY yalnıcz okuma yapmak için, PAGE_READWRITE hem okuma hem de yazma yapmak için, PAGE_WRITECOPY "copy on write" işlemi için, PAGE_EXECUTE_XXX bayrakları ise paylaşılan alana yerleştirilecek programın çalıştırılabilmesi
+                için kullanılmaktasır. Burada en yaygın kullanılan bayrak PAGE_READWRITE bayrağıdır. Fonksiyonun sonraki iki parametresi file mapping nesnesinin 8 byte'lık uzunlupunun yüksek ve düşük anlamlı dörder byte'lık değerlerini almaktadır. Bu iki
+                parametre bellek tabanlı dosya oluştururken 0 geçilebilir. Bu durumda file mapping nesnesinin uzunuğu ilgili dosyanın uzunluğu kadar olur. Fonksiyonun son parametresi proseslerin aynı file mapping nesnesini görebilmesi için gerekli olan
+                ismi belirtir. Bu isim bir dosya ismi değildir. Programcının uydurduğu herhangi bir isim olabilir. Eğer haberleşme üst ve alt prosesler arasında yapılacaksa ya da bellek tabanlı dosya kullanılacaksa bu parametre NULL geçilebilir. Fonksiyon
+                zaten bu isimde bir file mapping nesnesi yoksa onu yaratır, varsa olanı açar. Fonksiyon başarı durumunda file mapping nesnesinin handle değerine başarısızlık durumunda NULL adrese geri dönmektedir. Eğer file mapping nesnesi varsa ve biz onu
+                açıyorsak fonksiyon başarılı olur, ancak GetLestError fonksiyonu fonksiyonu çağrıldığında fonksiyon ERROR_ALREADY_EXISTS değeri ile geri döner. CreateFileMapping fonksiyonu UNIX/Linux sistemlerindeki işlevsel olarak shm_open fonksiyonuna
+                benzetilebilir. Örneğin:
+
+                    HANDLE hFileMapping;
+                    ...
+
+                    if ((hFileMapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, 4096, FILE_MAPPING_NAME)) == NULL)
+                        ExitSys("CreateFileMapping");
+
+                -> Artık file mapping nesnesi için sanal bellekte yer tahsis etmek gerekir. Yani başka bir deyişle nesneyi belleğe "map etmek" gerekir. Bu işlem MapViewOfFile API fonksiyonuyla yapılmaktadır. Bu fonksiyonun prototipi şöyledir:
+
+                    LPVOID MapViewOfFile(
+                        HANDLE hFileMappingObject,
+                        DWORD  dwDesiredAccess,
+                        DWORD  dwFileOffsetHigh,
+                        DWORD  dwFileOffsetLow,
+                        SIZE_T dwNumberOfBytesToMap
+                    );
+
+                Fonksiyonun birinci parametresi file mapping nesnesinin handle değerini almaktadır. Fonksiyonun ikinci parametresi map edilecek alandaki sayfaların koruma özelliklerini belirtmektedir. (Yani örneğin biz file mapping nesnesini read/write olarak
+                oluşturmuş olabiliriz. Ancak "read only" yapabiliriz.) Buradaki bayraklar aşağıdı derlerin bit OR işlemine sokulmasıyla oluşturulmaktadır:
+
+                    FILE_MAP_READ
+                    FILE_MAP_WRITE
+                    FILE_MAP_ALL_ACCESS
+                    FILE_MAP_COPY
+                    FILE_MAP_EXECUTE
+                    FILE_MAP_LARGE_PAGES
+                    FILE_MAP_TARGETS_INVALID
+
+                Bu parametre tipik olarak FILE_MAP_READ|FILE_MAP_WRITE biçiminde girilir. Tabii bu durumda file mapping nesnesinin de PAGE_READWRITE biçiminde yaratılmış olması gerekir. Fonksiyoun sonraki iki parametresi file mapping nesnesinin neresinin map
+                edileceğini belirtmektedir. Bu parametreler 8 byte'lık uzunluk değerinin yüksek anlamlı ve düşük anlamlı dört byte'ını almaktadır. Bu offset değerinin sayfa katlarında olması gerekmektedir. Son parametre map edilecek uzunluğu belirtmektedir. Bu
+                değer 0 girilirse file mapping nesnesinin belirtilen offset'ten itibaren geri kalan hepsi map edilmektedir. Fonksiyon başarı durumunda map edilen sanal bellek adresine, başarısızlık durumunda NULL adrese geri dönmektedir. MapViewOfFile API
+                fonksiyonu işlevsel olarak UNIX/Linux sistemlerindeki mmap POSIX fonksiyonuna benzetilebilir. Örneğin:
+
+                    char *pcMapAddr;
+                    ...
+
+                    if ((pcMapAddr = (char*)MapViewOfFile(hFileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0)) == NULL)
+                        ExitSys("MapViewOfFile");
+
+                -> Haberleşme bittikten sonra artık iki proses de map edilen sanal bellek alanını UnmapViewOfFile API fonksiyonuyla serbest bırakabilir. Fonksiyonun prototipi şöyledir:
+
+                    BOOL UnmapViewOfFile(
+                        LPCVOID lpBaseAddress
+                    );
+
+                Fonksiyon parametre olarak MapViewOfFile fonksiyonu ile tahsis edilmiş olan sanal bellek adresini alır. Başarı durumunda sıfır dışı bir değere başarısızlık durumunda sıfır değerine geri döner. Bu fonksiyon UNIX/Linux sistemlerindeki işlevsel olarak
+                munmap fonksiyonuna benzetilebilir. Ancak maunmap fonksiyonunun parçalı geri bırakmaya izin verdiğini anımsayınız. Bu fonksiyon ise tüm taksis edilen alanı geri bırakmaktadır. 
+
+                -> Nihayet CreateFileMapping fonksiyonu ile elde edilmiş olan file mapping nesnesi CloseHandle API fonksiyonuyle kapatılmalıdır. Fonkisyonun
+                prototipini daha önce vermiştik:
+
+                    BOOL CloseHandle(
+                        HANDLE hObject
+                    );
+
+                FileMapping nesneleri son proses de nesneyi kapattığında otomatik olark sistemden silinmektedir. Halbuki UNIX/Linux sistemlerinde bu nesnelerin reboot edilene kadar (kernel persistent) ya da silinene kadar kaldığını anımsayınız. 
+
+            Aşağıdaki örnekte "Prog1.c" ve "Prog2.c" programları paylaşılan bellek alanları yoluyla haberleşmektedir. "Prog1.c" programı paylaşılan bellek alanına 0'dan 100'e kadar int sayıları yerleştirir. "Prog2.c" programı da bunları okuyup ekrana (stdout
+            dosyasına) yazdırmaktadır. 
+                * Örnek 1,
+                    /* Prog1.c */
+                        #include <stdio.h>
+                        #include <stdlib.h>
+                        #include <Windows.h>
+
+                        #define FILE_MAPPING_NAME		"TestFileSharedMemory"
+
+                        void ExitSys(LPCSTR lpszMsg);
+
+                        int main(void)
+                        {
+                            HANDLE hFileMapping;
+                            int *mapAddr;
+
+                            if ((hFileMapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, 4096, FILE_MAPPING_NAME)) == NULL)
+                                ExitSys("CreateFileMapping");
+
+                            if ((mapAddr = (int *)MapViewOfFile(hFileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0)) == NULL)
+                                ExitSys("MapViewOfFile");
+
+                            for (int i = 0; i < 100; ++i)
+                                mapAddr[i] = i;
+
+                            printf("Press ENTER to EXIT...\n");
+                            getchar();
+
+                            UnmapViewOfFile(mapAddr);
+                            CloseHandle(hFileMapping);
+
+                            return 0;
+                        }
+
+                        void ExitSys(LPCSTR lpszMsg)
+                        {
+                            DWORD dwLastError = GetLastError();
+                            LPSTR lpszErr;
+
+                            if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError,
+                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&lpszErr, 0, NULL)) {
+                                fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                                LocalFree(lpszErr);
+                            }
+
+                            exit(EXIT_FAILURE);
+                        }
+
+                    /* Prog2.c */
+                        #include <stdio.h>
+                        #include <stdlib.h>
+                        #include <Windows.h>
+
+                        #define FILE_MAPPING_NAME		"TestFileSharedMemory"
+
+                        void ExitSys(LPCSTR lpszMsg);
+
+                        int main(void)
+                        {
+                            HANDLE hFileMapping;
+                            int *mapAddr;
+
+                            if ((hFileMapping = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, 4096, FILE_MAPPING_NAME)) == NULL)
+                                ExitSys("CreateFileMapping");
+
+                            if ((mapAddr = (int *)MapViewOfFile(hFileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0)) == NULL)
+                                ExitSys("MapViewOfFile");
+
+                            printf("Press ENTER to read...\n");
+                            
+                            for (int i = 0; i < 100; ++i) 
+                                printf("%d ", mapAddr[i]);
+                            printf("\n");
+
+                            UnmapViewOfFile(mapAddr);
+                            CloseHandle(hFileMapping);
+
+                            return 0;
+                        }
+
+                        void ExitSys(LPCSTR lpszMsg)
+                        {
+                            DWORD dwLastError = GetLastError();
+                            LPSTR lpszErr;
+
+                            if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError,
+                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&lpszErr, 0, NULL)) {
+                                fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                                LocalFree(lpszErr);
+                            }
+
+                            exit(EXIT_FAILURE);
+                        }
+
+            >>>> Bellek Tabanlı Dosyalar : Windows sistemlerinde bellek tabalı dosyaların oluşturulması da oldukça kolaydır. Sırasıyla şu işlemlerin yapılması gerekmektedir;
+
+                -> İlgili dosya CreateFile API fonksiyonuyla açılır. 
+                
+                -> Açılan dosyanın handle değeri verilerek CreateFileMapping fonksiyonu ile mapping nesnesi elde edilir. File mapping nesnesi oluşturulurken artık buna bir isim verilmesine gerek yoktur.
+
+                -> File mapping nesnesinin handle değeri verilerek MapViewOfFile fonksiyonu çağrılır ve sanal bellek adresi elde edilir. 
+
+                -> Kullanım bittikten sonra map edilen adres UnmapViewFile fonksiyonu ile serbest bırakılır. Yine file mapping nesnesi ve açılmış olan dosya CloseHandle fonksiyonlarıyla kapatılır. 
+
+            Windows sistemlerinde de "unified file system" kullanılmaktadır. Yani mapping yapılan dosya için verilen adres tıpkı Linux sistemlerinde olduğu gibi işletim sisteminin kullandığı "page cache" buffer adresidir. Yani bir proses yine bu sistemlerde
+            paylaşılan bellek alanına bir şey yazdığı zaman diğer prosesler (eğer dosya sharing modda açılmışsa) bu yazılanı görmektedir. Bunun tersi de geçerlidir. Windows sistemlerinde bu durum Microsoft tarafındna garanti edildiği için bu sistemlerde
+            UNIX/Linux sistemlerinde olduğu gibi msync benzeri bir fonksiyon yoktur. 
+                * Örnek 1, Aşağıda Windows sistemlerinde bellek tabanlı dosya örneği verilmektedir.
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <Windows.h>
+
+                    void ExitSys(LPCSTR lpszMsg);
+
+                    int main(void)
+                    {
+                        HANDLE hFile;
+                        HANDLE hFileMapping;
+                        char *mapAddr;
+                        DWORD dwSize;
+
+                        if ((hFile = CreateFile("test.txt", GENERIC_READ|GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE)
+                            ExitSys("CreateFile");
+
+                        if ((dwSize = GetFileSize(hFile, NULL)) == INVALID_FILE_SIZE && GetLastError() != NO_ERROR) 
+                            ExitSys("GetFileSize");
+
+                        if ((hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READWRITE, 0, 0, NULL)) == NULL)
+                            ExitSys("CreateFileMapping");
+
+                        if ((mapAddr = (char *)MapViewOfFile(hFileMapping, FILE_MAP_READ | FILE_MAP_WRITE, 0, 0, 0)) == NULL)
+                            ExitSys("MapViewOfFile");
+
+                        for (DWORD i = 0; i < dwSize; ++i)
+                            putchar(mapAddr[i]);
+                        putchar('\n');
+
+                        memcpy(mapAddr, "XXXXX", 5);
+
+                        UnmapViewOfFile(mapAddr);
+                        CloseHandle(hFileMapping);
+                        CloseHandle(hFile);
+
+                        return 0;
+                    }
+
+                    void ExitSys(LPCSTR lpszMsg)
+                    {
+                        DWORD dwLastError = GetLastError();
+                        LPSTR lpszErr;
+
+                        if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError,
+                            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&lpszErr, 0, NULL)) {
+                            fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                            LocalFree(lpszErr);
+                        }
+
+                        exit(EXIT_FAILURE);
+                    }
+
+                * Örnek 2, Aşağıda bir BMP dosyasını bellek tabanlı olarak açıp ona ilişkin bilgileri alan bir Windows programı verişmiştir. BMP dosya formatı için çeşitli kaynaklara başvurabilirsiniz. Örneğin aşağıdaki bağlantıda BMP dosya formatı temel
+                düzeyde açıklanmıştır:
+
+                    https://www.ece.ualberta.ca/~elliott/ee552/studentAppNotes/2003_w/misc/bmp_file_format/bmp_file_format.htm
+
+                Aşağıdaki programda Windows ile ilgili kısım Macar Notasyonu ile diğer kısımlar klasik C notasyonu ile yazılmıştır.
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <stdint.h>
+                    #include <Windows.h>
+
+                    void ExitSys(LPCSTR lpszMsg);
+
+                    #define ROUND_UP(val, n)		(((val) + (n) - 1) / (n) * (n))
+
+                    #pragma pack(1)
+
+                    typedef struct tagBITMAP_FILE_HEADER {
+                        uint8_t signature[2];
+                        uint32_t file_size;
+                        uint32_t reserved;
+                        uint32_t data_offset;
+                    } BITMAP_FILE_HEADER;
+
+                    typedef struct tagBITMAP_INFO_HEADER {
+                        uint32_t header_size;
+                        uint32_t image_width;
+                        uint32_t image_height;
+                        uint16_t plane;
+                        uint16_t bits_per_pixel;
+                        uint32_t compression;
+                        uint32_t compressed_image_size;
+                        uint32_t horizontal_res;
+                        uint32_t vertical_res;
+                        uint32_t color_used;
+                        uint32_t important_colors;
+                    } BITMAP_INFO_HEADER;
+
+                    typedef struct tagBITMAP_FORMAT {
+                        BITMAP_FILE_HEADER file_header;
+                        BITMAP_INFO_HEADER info_header;
+                        /* ... */
+                    } BITMAP_FORMAT;
+
+                    typedef struct tagRGB {
+                        uint8_t red, green, blue;
+                    } RGB;
+
+                    void get_pixel24(uint8_t *dbmp, int width, int height, int row, int col, RGB *rgb);
+
+                    int main(void)
+                    {
+                        HANDLE hFile;
+                        HANDLE hFileMapping;
+                        DWORD dwSize;
+                        BITMAP_FORMAT *bmp;
+                        const char *compression_types[] = {"NO COMPRESSION", "8 BIT RLE ENCODING", "4 BIT RLE_ENCODING"};
+                        uint8_t *dbmp;
+                        RGB rgb;
+
+                        if ((hFile = CreateFile("test.bmp", GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE)
+                            ExitSys("CreateFile");
+
+                        if ((dwSize = GetFileSize(hFile, NULL)) == INVALID_FILE_SIZE && GetLastError() != NO_ERROR) 
+                            ExitSys("GetFileSize");
+
+                        if ((hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL)) == NULL)
+                            ExitSys("CreateFileMapping");
+
+                        if ((bmp= (BITMAP_FORMAT *)MapViewOfFile(hFileMapping, FILE_MAP_READ, 0, 0, 0)) == NULL)
+                            ExitSys("MapViewOfFile");
+                        
+                        printf("Signature: %c%c (%02X %02X)\n", bmp->file_header.signature[0], bmp->file_header.signature[1], 
+                            bmp->file_header.signature[0], bmp->file_header.signature[1]);
+                        printf("File Size:%lu (%lX)\n", (unsigned long)bmp->file_header.file_size, (unsigned long)bmp->file_header.file_size);
+                        printf("Data Offset: %lu (%lX)\n", (unsigned long)bmp->file_header.data_offset, (unsigned long)bmp->file_header.data_offset);
+                        
+                        printf("Info Header Size: %lu (%lX)\n", (unsigned long)bmp->info_header.header_size, (unsigned long)bmp->info_header.header_size);
+                        printf("Image Width: %lu (%lX)\n", (unsigned long)bmp->info_header.image_width, (unsigned long)bmp->info_header.image_width);
+                        printf("Image Height: %lu (%lX)\n", (unsigned long)bmp->info_header.image_height, (unsigned long)bmp->info_header.image_height);
+                        printf("Bits Per Pixel: %lu (%lX)\n", (unsigned long)bmp->info_header.bits_per_pixel, (unsigned long)bmp->info_header.bits_per_pixel);
+                        printf("Compression: %s\n", compression_types[bmp->info_header.compression]);
+
+                        /* .... */
+                                
+                        dbmp = (uint8_t *)bmp + bmp->file_header.data_offset;
+                        
+                        get_pixel24(dbmp, bmp->info_header.image_width, bmp->info_header.image_height, 46, 157, &rgb);
+                        printf("Red: %d, Green: %d, Blue: %d\n", rgb.red, rgb.green, rgb.blue);
+                        
+                        UnmapViewOfFile(bmp);
+                        CloseHandle(hFileMapping);
+                        CloseHandle(hFile);
+
+                        return 0;
+                    }
+
+                    void get_pixel24(uint8_t *dbmp, int width, int height, int row, int col, RGB *rgb)
+                    {
+
+                        uint32_t destoff;
+
+                        destoff = (height - row - 1) * ROUND_UP(width * 3, 4) + col * 3;
+                        
+                        rgb->blue = dbmp[destoff];
+                        rgb->green = dbmp[destoff + 1];
+                        rgb->red = dbmp[destoff + 2];
+                    }
+
+                    void ExitSys(LPCSTR lpszMsg)
+                    {
+                        DWORD dwLastError = GetLastError();
+                        LPSTR lpszErr;
+
+                        if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError,
+                            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&lpszErr, 0, NULL)) {
+                            fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                            LocalFree(lpszErr);
+                        }
+
+                        exit(EXIT_FAILURE);
+                    }

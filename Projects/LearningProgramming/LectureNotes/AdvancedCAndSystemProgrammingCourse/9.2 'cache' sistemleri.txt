@@ -1,0 +1,705 @@
+> Cache Sistemler: Sistem programalama karşımıza çıkan önemli olgulardan biri de "cache sistemleridir". Bir sistem programcısının cache sistemlerine ilişkin temel bilgileri edinmiş olması gerekmektedir. Bu bölümde cache
+sistemlerinde üzerinde durulacaktır. Bir bilgiye erişilmek istenen durumlarda çoğu kez karşımıza iki bellek türü çıkmaktadır: Yavaş bellek ve hızlı bellek. Yavaş bellek genellikle bol ve ucuzdur. Hızlı bellek ise kıt ve
+pahalıdır. Dolayısıyla tüm belleğin hızlı bellek olarak tasarlanması uygun olamayabilmektedir. Ayrıca bazı sistemlerde sistemin doğası gereği yavaş bellekler hızlı belleklerle yer değiştirememektedir. Genellikle asıl
+bilgiler yavaş belleklerde saklanır. Hızlı bellekler yavaş belleklere erişimi azaltarak hız kazancı sağlamak için kullanılırlar. Bir cache sisteminde yavaş belleğin belli bölümleri hızla bellekte tutulur. Yavaş bellekteki
+bilgiye başvurmak isteyen kişi önce bilgiyi hızlı bellekte arar. Eğer yavaş belleğin o kısmı hızlı bellek içerisinde bulunuyorsa bilgi hızlı bir biçimde elde edilir. Eğer yavaş belleğin içerisindeki bilgi o anda hızlı
+bellekte bulunmuyorsa bu durumda gerçekten yavaş belleğe başvurularak bilgi oradan elde edilir. Bu sistemde yavaş belleğin belli bölümlerini tutan hızlı belleğe "cache bellek" denilmektedir. Bu sistemler de
+"cache sistemleri" olarak adlandırılmaktadır. (Cache sözcüğünün genellikle Türkçe karşılığı "ön bellek" biçiminde ifade edilmektedir. Biz bazen "cache" sözcüğünü bazen de "ön bellek" sözcüğünü kullanacağız.) Cache sisteminde
+bilgiye erişilmek istendiğinde eğer bilgi cache bellekte bulunuyorsa bu duruma İngilizce "cache hit (ön belleğin isabet ettirilmesi") denilmektedir. Eğer bilgi cache bellekte yoksa bu duruma da İngilizce "cache miss
+(cache belleğin ıskalanması)" denilmektedir. İyi bir cache sisteminde "cache hit" oranının yükseltimesi istenir. Cache hit oranı N tane erişimin yüzde kaçının cache'ten karşılandığına denilmektedir. Bunu şöyle gösterebiliriz:
+
+    Cache hit oranı = cache hit sayısı / N
+
+Pekiyi bir cache sisteminde cache hit oranı nasıl artırılabilir? Şüphesiz cache bellek büyütüldükçe bunun cache hit oranı üzerinde olumlu bir etkisi olacaktır. Ancak bu durumda maliyet de artacaktır. Cache hit oranı üzerinde
+en önemli etkenlerden biri yavaş belleğin nerelerinin hangi sürelerde hızlı bellekte tutulacağına ilişkin stratejilerdir. Bunlara İngilizce "cache replacement" algoritmaları denilmektedir. Bir cache sistemi donanımsal ya da
+yazılımsal biçimde oluşturulabilmektedir. Donanımsaşl cache sistemlerinde gerçekleştirim elektrik devreleriyle yapılmıştır dolayısıyla gebellikle yazılımsal bir müdahale söz konusu olamamaktadır. Yazılımsal cache sistemleri ise 
+tamamen programalama yoluyla oluşturulmuş cache sistemleridir. Sistem programlama faaliyetlerinde cache sistemleri değişik biçimlerde karşımıza çıkabilmektedir. Bunlara birkaç örnek vermek istiyoruz:
+
+    -> Bugün bilgisayar sistemlerinde genellikle ana bellek olarak DRAM (Dynamic RAM) denilen bellekler kullanılmaktadır. DRAM belleklerde belleğin bir biti tipik olarak bir kapasitif elemanla bir transistörden oluşturulmaktadır.
+    Bu yapı DRAM'ların az yer kaplamasını ve ucuz olmasını sağlamaktadır. Bugün kullandığımız DRAM bellekler 10 nanosaniyeye kadar hızlandırılmış durumdadır. Eskiden (80'li yılların oralarına kadar) CPU'lar DRAM belleklerden daha
+    yavaştı. Bu yıllarda dolayısıyla CPU'lar DRAM bellekleri beklemiyordu. Ancak 80'li yılların sonlarına doğru CPU'lar DRAM bellekleri hız bakımından geçti. Bu durumda CPU DRAM'dan bir bilgi talep ettiğinde o bilgi DRAM'dan gelene 
+	kadar bekliyordu (buna CPU terminolojisinde "wait state" denilmektedir) İşte 80'li yılların sonlarına doğu yavaş yavaş kişisel bilgisauarlarda DRAM beklemeleri azaltmak için donanımsal biçimde çalışan cache bellekler
+    oluşturulmaya başlandı. Bu tasarımda SRAM (static RAM) teknolojisi ile üretilen hızlı RAM'ler cache olarak kullanılıyordu. (SRAM'lerde bir bir tipik olarak SR Latch denilen flip flop devresi ile gerçekleştirilmektedir.
+	Bu tasarım bir bir için fazla sayıda transistörün kullanılmasına yol açmaktadır. Böylece SRAM'ler hem daha fazla yer kaplamakta hem de daha pahalı olmaktadır.) İşte o yıllarda artık CPU'lar önce cache balleğe vuruyor eğer cache
+    "miss olursa" DRAM bellekten bilgiyi alıyordu. Daha sonraları CPU'lar daha da hızlanınca artık CPU'ların içerisine de SRAM olarak üretilmiş cache bellekler yerleştirilmeye başlandı. Böylece çok kademeli cache sistemleri uygulandı.
+    CPU bilgiyi önce en hızlı biçimde kendi içerisindeki L1 cache denilen bellekte arıyor orada bulamazsa CPU dışındaki L2 cache cache denilen belleğe başvuruyordu. Eğer bilgi L2 cache'te de bulunamazsa DRAM erişimi yapılıyordu.
+    Bugünkü bilgisayar sistemlerinde genellikle 3 kademe cache kullanılmaktadır. L1 ve L2 cache'ler CPU içerisinde L3 cache CPU dışında konuşlandırılmaktadır. Çok çekirdekli sistemlerde her çekirdeğin ayrı bir L1 ve L2 cache'i bulunmaktadır.
+
+	-> Çok karşılaşılan bir cache sistemi de işletim sistemleri tarafından oluşturulan ve ismine "disk cache" sistemi, "buffer cache" sistemi ya da "page cache" denilen cache sistemleridir. İşletim sistemleri yazılımsal olarak diskte
+    okunan blokları RAM'de bir cache alanında tutmaktadır. Böylece bir disk okuması yapılmak istendiğinde önce RAM'deki bu cache'e başvurulmakta blok zaten orada varsa hiç okuması yapılmadan oradan alınmaktadır. Bu disk cache (buffer cache)
+    sistemi işletim sistemlerinin performanslarında önemli bir etkiye sahiptir. Çünkü bilgisayar sistemlerinin en yavaş bileşenlerinden biri disk sistemidir. Bu cache sisteminde yavaş bellek diski hızlı bellek DRAM belleği temsil etmektedir. 
+
+	-> İşletim sistemlerinin çekirdekleri disk cache (buffer cache) sisteminin yanı sıra son işleme sokulan dosya bilgilerinin saklandığı "i-node cache" ve son işleme sokulan dizin girişlerinin saklandığı "directory entry cache (dentry cache)"
+    denilen cache sistemlerini de kullanmaktadır. Böylece bir dosya işlemi yapılırken dosya bilgilerine hızlı bir biçimde erişilebilmektedir. 
+
+	-> Web tarayıcıları da kendi içerisinde bir cache sistemi kullanabilmektedir. Bir web sayfasına eriştiğimizde o sayfanın içeriği tarayıcının cache sisteminde bulunuyor olabilir. Bu durumda doğrudan sayfa kullanıcıya gösterilebilir. Burada
+    yavaş bellek web sayfasının barındırıldığı sunucuyu, hızlı bellek ise yerel bilgisayarı temsil etmektedir. 
+
+	-> Dağıtık uygulamalarda da cache sistemleriyle çokça karşılaşılmaktadır. Örneğin bir sosyal medya uygulamasında resimler o coğrafi bölgeye yakın olan daha hızlı erişilebilen CDN denilem server'larda tutulabilmektedir. 
+
+	-> Standart C kütüphaenesindeki dosya fonksiyonları da ileride detaylı biçimde ele alacağımız gibi bir cache sistemi kullanmaktadır. 
+
+	-> Manyetik temelli Hard Disklerde de bir cache sistemi bulundurulmaktadır. Sistem programcısı HDD'den bir blok okumak istediğinde eğer o blok HDD'nin kendi cache'i içerisinde varsa doğrudan oradan alınmaktadır. Eğer yoksa disk kafaları
+    hareklet ettirilip bilgi elektro mekanik bir biçimde diskten elde edilmektedir. 
+
+Cache bellek genel olarak bloklardan (yani ardışıl byte topluluklarından) oluşmaktadır.Her bloğu yavaş belleğin farklı bir yerini tutabilmektedir. Eğer cache sisteminde cache bellek yalnızca okuma amaçlı kullanılıyorsa yazma işlemi doğruan yavaş
+belleğe yapılıyorsa bu tür cache sistemlerine "read only cache sistemleri" denilmektedir. Eğer yazma işlemi de cache belleğe yapılabiliyorsa bu tür cache sistemlerine de "read-write sistemleri" ya da "write throuh cache sistemleri" denilmektedir.
+Şüphesiz read-write cache sistemleri daha yüksek bir performans sunmaktadır. Ancak bu sistemlerde birtakım anomaliler oluştuğunda cache belleğe yazılan ancak yavaş belleğe henüz aktarılmamış bilgilerin kaybedilme olasılığı vardır. Read-write cache
+sistemlerinde bir cache bloğu cache'ten atılacağı zaman onun daha önce değiştirilip değiştirilmediğine bakılması gerekir. Eğer o cache bloğuna yazma yapılmışsa o cache bloğu cache'ten atılmadan önce yavaş belleğe yazılmalıdır. Genel olarak cache
+terminolojisinde bir cache bloğunun içeriğinin güncellenmiş olmasına o cache bloğunun ""kirlenmiş (dirty)" olması denilmektedir. Bir cache bloğunun yavaş belleğe içeriği değiştiğinden dolayı geri yazılmasına "flush"	işlemi de denilmektedir. Pekiyi
+cache blokları ne zaman flush edilmelidir? Bir cache bloğu cache'ten atılacağı zaman eğer kirlenmişse flush edilmelidir. Ancak kirlenmemişse onun flush edilmesine gerek yoktur. Ancak kirlenmiş cache bloklarının uzun süre flush edilmeden bekletilmesi
+de anomali durumlarında bilgi kayıplarına yol açabilmektedir. Örneğin işletim sistemlerinin disk cache (buffer cache) sistemleri read-write cache sistemleridir. Ancak kirlenmiş cache blokları çok da fazla bekletilmeden belli periyotlarla çeşitli
+kernel thread'ler tarafından diske flush edilmektedir. Bu tür yazımlara "delayed write" denilmektedir. Yukarıda da belirttiğimiz gibi cache bellek tipik olarak blok ya da "line" denilen ardışıl byte topluluklarındanm oluşmaktadır. Genel olarak
+cache'teki her bir bloğun bir numarası vardır. Örneğin elimizde 100K'lık bir cache olsun. Bir cache bloğu da 1K'dan oluşsun. Bu cache içeisinde toplam 100 tane cache bloğu vardır. İşte bu bloklara sırasıyla numaraler verilmektedir.
+    * Örnek 1.0,
+        Cache
+        
+        0. Blok (1K)
+        1. Blok (1K)
+        2. Blok (1K)
+        ...
+        97. Blok (1K)
+        98. Blok (1K)
+        99. Blok (1K)
+
+    * Örnek 1.1, Yavaş belleğin de 1MB olduğunu varsayalım. İşte yavaş bellek de yine cache bloklarında olduğu gibi bloklara ayrılmaktadır:
+
+        Yavaş Bellek
+
+        0. Blok (1K)
+        1. Blok (1K)
+        2. Blok (1K)
+        ...
+        997. Blok (1K)
+        998. Blok (1K)
+        999. Blok (1K)
+
+Bu örnekte toplam 1000 bloktan oluşan yavaş belleğin ardışıl olmayan 100 bloğu cache bellekte tutulmaktadır. Bu sistem yazılımsal olarak oluşturulacaksa bizim cache bloklerının ahngisinin yavaş belleğin hangi bloğundaki bilgiyi tuttuğunu bir biçimde
+izlememiz gerekir. Bu sistemde örneğin biz yavaş belleğin 718'inci bloğuna erişmek isteyelim. Sistemin önce bu 718'inci bloğun cache içerisinde olup olmadığına bakması gerekir. Örneğin bu 718'inci bloğun içeriği cache belleğin 54'üncü bloğunda olabilir.
+O zaman erişim hızlı bir biçimde cache'in 54'üncü bloğundan sağlanacaktır. Ancak eğer bu 718'inci blok cache'te yoksa bu durumda bu blok gerçekten yavaş belleğin 718'inci bloğundan elde edilecektir. Mademki her blok işleminde önce o blok cache'te mi
+diye bakılmaktadır o halde bu arama işleminin hızlı yapılması gerekir. Bu tür sistemlerde sıralı arama (sequential search) iyi bir fikir değildir. Böylesi aramalarda tipik olarak "hash tabloları (hash table)" denilen veri yapıları tercih edilmektedir.
+Kursumuzun algortimaalar ve veri yapıları kısmında hash tabloları incelenmektedir. Yukarıda açıkladığımız gibi bir cache sistemi olsun. Yavaş belleğin 1000 bloktan cache belleğin ise 100 bloktan oluştuğunu varsayalım. Cache sistemlerindeki en önemli
+algoritmik sorun şudur:
+    
+    Biz yavaş belleğin hangi bloklarını cache bellekte tutmalıyız?
+    
+Yani yukarıdaki örnekte 1000 blokluk yavaş belleğin hangi 100 bloğunu cache bellekte tutmalıyız? Bizim amacımız "cache hit" oranını yükseltmektir. Eğer biz yavaş belleğin nerelerinin çok kullanıldığını önceden biliyor olsak problem çok basit olurdu.
+Bu duurmda en çok kullanılacak blokları cache'te tutardık. Ancak böyle bir bilgiye genellikle sistem programcıları sahip olmazlar. Cache sistemlerinde genellikle cache bellekteki bloklar dinamik bir biçimde kullanılmaktadır. Yani duruma göre bir cache
+bloğunun içeriği atılıp yavaş belleğin daha uygun bir bloğu cache'e alınabilmektedir. Yavaş belleğin hangi bloklarının cache'te tutulacağına ilişkin algoritmalara İngilizce "cache replacement" algortimaları denilmektedir. Biz buna "cache algoritmaları"
+diyeceğiz. Literatürde değişik durumlar için düşünülmüş çeşitli cache algoritmaları vardır. Biz burada en fazla kullanılan algoritmaları tanıtacağız. 
+
+    -> En Az Kullanılanın Cache'ten Atılması Algoritması (Least Frequently Used (LFU)): Bu yöntemde yavaş bellekten okunan bloklar cache'e alınır. Cache'teki her blok için bir sayaç tutulur. Her "cache hit" oluştuğunda o bloğun sayacı bir artırlır.
+    Cache dolduğunda ve bir "cache miss" oluştuğunda o zamana kadar en az kullanılan blok cache'ten çıkarılır. Cache miss olan yavaş bellek bloğu cache'e alınır. Böylece cache'te o zamana kadar fazla kullanılan bloklar tutulmuş olur. Buradaki varsayım
+    şudur:
+
+        Şimdiye kadar az kullanılmış olan bloklar bundan sonra da az kullanılacaktır.
+        
+    Bu algoritmada "thrashing" denilen bir problemin giderilmesi gerekmektedir. Cache'e yeni çekilen bloğun başlangıç sayacı 0'da tutulursa ilk cache miss olduğunda bu blok yeniden cache'ten atılır. O halde cache'e alınan bloğun başlangıç sayacının 0
+    yapılması uygun değildir. 
+
+    -> Son Zamanlarda En Az Kullanılanın Cache'ten Atılması (Least Recently Used (LRU)): Açık ara en fazla tercih edilen cache algoritması budur. Örneğin Linux çekirdeğindeki çeşitli cache sistemlerinde hep bu algortima kullanılmaktadır. Bu algoritmada
+    cache'ten blok çıkatılacağı zaman onların toplam hit sayaçlarına bakılmaz. Onların son zamanlarda çok kullanılıp kullanılmadığına bakılır. Bilgisayar sistemlerinde tipik çalışmada birtakım bloklar bir zaman dilimi içerisinde çok kullanılıp sonra bir
+    daha seyrek kullanılmakta ya da hiç kullanılmamaktadır. Örneğin işletim sisteminin disk cache sistemini düşünelim. Bir program çalıştığında o program belli disk bloklarını sürekli kullanıyor olabilir. Ancak programın çalışması bittiğinde artık o
+    bloklar çok seyrek kullanılıyor olacaktır. Bu algoritma tipik olarak bri bağlı liste ile gerçekleştirilmektedir. Cache hit olan bloklar bağlı listede öne çekilir. Böylece son zamanlara en az kullanılan bloklar bağlı listenin sonunda kalır. Cache'ten
+    blok çıkartılacağı zaman bağlı listenin sonundaki bloklar çıkartılır. 
+        * Örnek 1, 	Aşağıda read-only LRU cache sistemine bir örnek verilmiştir. Örneğimizde diski temsil eden "test.dat" isimli her bloğu 32 byte olan 100 bloktan oluşaşn (toplam 3200 byte) bir dosya kullanılmaktadır. İşin başında bu dosyaya rastgele
+        text içerik atanmıştır. Burada oluşturulan cache sistemindeki fonksiyonlar şunlardır:
+
+            HCACHE open_disk(const char *path, int flags);
+            int read_disk(HCACHE hc, int blockno, void *buf);
+            int close_disk(HCACHE hc);
+
+	    open_disk fonksiyonu "test.dat" dosyasını açar, cache veri yapısına ilkdeğerlerini verir. read_disk fonksiyonu diskten cache sistemini kullanarak bir blok okumaktadır. close_disk fonksiyonu ise cache sistemini kapatmaktadır. Kullanılan cache
+        veri yapısı şöyledir:
+
+            typedef struct tagCACHELINE {
+                char buf[LINE_SIZE];
+                int blockno;
+                size_t count;
+            } CACHE_LINE;
+
+            typedef struct tagCACHE {
+                int fd;
+                CACHE_LINE clines[NCACHE_LINES];
+                size_t tcount;
+            } CACHE, *HCACHE;
+
+        Burada cache sistemi CACHE isimli bir yapıyla temsil edilmiştir. Her cache bloğu CACHE_LINE isimli bir yapıyla temsil edilmiştir. Tüm cache blokları CACHE_LINE türünden bir dizide toplanmıştır. Her cache bloğunda cache içeriği, diskteki blok
+        numarası ve hit sayacı tutulmaktadır. Buradaki simülasyon kodundaki algoritmik kusurlar şunlardır; Okunmak istenen bloğun tek tek cache bloklarında sıralı bir biçimde aranması. Tabii buradaki simülasyonda 10 tane cache bloğu vardır. Dolayısıyla
+        sıralı arama çok hızlı bir biçimde gerçekleştilmektedir. Az sayıda (örneğin 10 civarında) elemanın bulunduğu durumda sıralı arama iyi bir yöntemdir. Yukarıda da belirttiğimiz gibi arama işlemi için genellikle "hash tabloları" kullanılmaktadır.
+        Bir diğer kusur ise en düşük sayaca sahip olan cache bloğu da sıralı arama ile bulunmasıdır. Aşağıda bu konuya ilişkin program kodları verilmiştir:
+            /* diskcache.h */
+                #ifndef DISKCACHE_H_
+                #define DISKCACHE_H_
+
+                /* Symbolic Constants */
+
+                #define LINE_SIZE               32
+                #define NCACHE_LINES            10
+                #define INITIAL_COUNT           2
+
+                #ifdef DEBUG
+                #define DEBUG_PRINT(fmt, ...)  fprintf(stderr, fmt, ## __VA_ARGS__)     
+                #else
+                #define DEBUG_PRINT(fmt, ...)       
+                #endif
+
+                /* Type Definitions */
+
+                typedef struct tagCACHELINE {
+                    char buf[LINE_SIZE];
+                    int blockno;
+                    size_t count;
+                } CACHE_LINE;
+
+                typedef struct tagCACHE {
+                    int fd;
+                    CACHE_LINE clines[NCACHE_LINES];
+                    size_t tcount;
+                } CACHE, *HCACHE;
+
+                /* Function Prototypes */
+
+                HCACHE open_disk(const char *path, int flags);
+                int read_disk(HCACHE hc, int blockno, void *buf);
+                void close_disk(HCACHE hc);
+
+                #endif
+
+            /* diskcache.c */
+                #define DEBUG
+
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <string.h>
+                #include <fcntl.h>
+                #include <sys/stat.h>
+                #include <unistd.h>
+                #include "diskcache.h"
+
+                #ifdef DEBUG
+                static void print_cline_counts(HCACHE hc);
+                #endif
+
+                static size_t select_line(HCACHE hc);
+
+                HCACHE open_disk(const char *path, int flags)
+                {
+                    HCACHE hc;
+                    int i;
+
+                    if ((hc = (HCACHE)malloc(sizeof(CACHE))) == NULL)
+                        return NULL;
+
+                    if ((hc->fd = open(path, flags)) == -1) {
+                        free(hc);
+                        return NULL;
+                    }
+
+                    for (i = 0; i < NCACHE_LINES; ++i) {
+                        hc->clines[i].blockno = -1;
+                        hc->clines[i].count = 0;
+                    }
+                    hc->tcount = 0;
+
+                    return hc;
+                }
+
+                int read_disk(HCACHE hc, int blockno, void *buf)
+                {
+                    int i;
+                    int rline;
+
+                    for (i = 0; i < NCACHE_LINES; ++i)
+                        if (hc->clines[i].blockno == blockno) {
+                            DEBUG_PRINT("Cache hit block %d, used cache line %d\n", blockno, i);
+
+                            memcpy(buf, hc->clines[i].buf, LINE_SIZE);
+                            ++hc->clines[i].count;
+                            ++hc->tcount;
+
+                #ifdef DEBUG
+                            print_cline_counts(hc);
+                #endif
+
+                            return 0;
+                        }
+
+                    rline = select_line(hc);
+
+                    if (lseek(hc->fd, (off_t)blockno * LINE_SIZE, SEEK_SET) == -1)
+                        return -1;
+                    if (read(hc->fd, hc->clines[rline].buf, LINE_SIZE) == -1)
+                        return -1;
+                    hc->clines[rline].blockno = blockno;
+
+                    hc->clines[rline].count = hc->tcount / NCACHE_LINES + 1;
+                    hc->tcount += hc->clines[rline].count;
+
+                    memcpy(buf, hc->clines[rline].buf, LINE_SIZE);
+
+                    DEBUG_PRINT("Cache miss block %d, used cache line %d\n", blockno, rline);
+
+                #ifdef DEBUG
+                    print_cline_counts(hc);
+                #endif
+
+                    return 0;
+                }
+
+                void close_disk(HCACHE hc)
+                {
+                    close(hc->fd);
+
+                    DEBUG_PRINT("Cache closed!\n");
+
+                    free(hc);
+                }
+
+                static size_t select_line(HCACHE hc)
+                {
+                    size_t min_count;
+                    size_t min_index;
+                    int i;
+
+                    min_count = hc->clines[0].count;
+                    min_index = 0;
+
+                    for (i = 1; i < NCACHE_LINES; ++i) {
+                        if (hc->clines[i].count < min_count) {
+                            min_count = hc->clines[i].count;
+                            min_index = i;
+                        }
+                    }
+
+                    return min_index;
+                }
+
+                #ifdef DEBUG
+
+                static void print_cline_counts(HCACHE hc)
+                {
+                    int i;
+
+                    putchar('\n');
+                    printf("Total count: %llu\n", (unsigned long long)hc->tcount);
+                    for (i = 0; i < NCACHE_LINES; ++i)
+                        printf("Cachle Line %d --> Block: %d, Count: %llu\n", i, hc->clines[i].blockno, (unsigned long long)hc->clines[i].count);
+
+                    putchar('\n');
+                }
+
+                #endif
+
+            /* diskcache-test.c */
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <time.h>
+                #include <fcntl.h>
+                #include "diskcache.h"
+
+                int create_test_file(const char *path, int nblocks);
+
+                int main(void)
+                {
+                    HCACHE hc;
+                    char buf[32 + 1];
+                    int blockno;
+
+                    if (create_test_file("test.dat", 100) == -1) {
+                        perror("create_test_file");
+                        exit(EXIT_FAILURE);
+                    }
+                    
+                    if ((hc = open_disk("test.dat", O_RDONLY)) == NULL) {
+                        fprintf(stderr, "cannot open file!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    for (;;) {
+                        printf("Block No:");
+                        scanf("%d", &blockno);
+                        putchar('\n');
+                        if (blockno == -1)
+                            break;
+
+                        if (read_disk(hc, blockno, buf) == -1) {
+                            perror("read_file");
+                            exit(EXIT_FAILURE);
+                        }
+                        buf[32] = '\0';
+                        printf("Block content: %s\n\n", buf);
+                    }
+
+                    close_disk(hc);
+
+                    return 0;
+                }
+
+                int create_test_file(const char *path, int nblocks)
+                {
+                    FILE *f;
+                    int i, k;
+                    char buf[LINE_SIZE];
+
+                    srand(time(NULL));
+                    if ((f = fopen(path, "wb")) == NULL)
+                        return -1;
+
+                    for (i = 0; i < nblocks; ++i) {
+                        sprintf(buf, "%04d ", i);
+                        for (k = 5; k < 32; ++k)
+                            buf[k] = rand() % 26 + 'A';
+
+                        if (fwrite(buf, LINE_SIZE, 1, f) != 1)
+                            return -1;
+                    }
+
+                    fclose(f);
+                }
+
+    -> En Fazla Kullanılanın Cache'ten Atılması (Most Frequenly Used (MRU)): Bu algroritma LFU algoritmasının tersini yapmaktadır. Yani toplamda o zamana kadar en fazla kullanılan bloğu cache'ten atmaktadır. Bu yöntem ilk başta saçma gelebilir. Ancak bazı
+    seyrek sistemlerde her bloğun yaklaşık eşit sayıda kullanılacağı baştan biliniyor olabilir. Bu durumda o zamana kadar çok hit almış cache blokları gelecekte daha az kullanılma potansiyilene sahiptir. Tabii bu algoritma çok seyrek kullanılmaktadır.
+
+    -> Rastgele Blokların Cache'ten Atılması (Random Cache Replacement): Bazı sistemlerde hiçbir öngürü yapılamamaktadır. Bu durumda rastgele blokların cache'ten atılması uygun olabilmektedir. 
+
+Diğer yandan read-write cache sistemlerinde cache belleğin yazma sırasında da kullanıldığını belirtmiştik. Yani bir blok yazılmak istendiğinde eğer o blok cache'te varsa doğrudan cache bloğu üzerine yazma yapılır. Tabii bu durumda bu blok atılacağı zaman
+güncellenmiş (kirlenmiş) olduğu için yavaş belleğe geri yazılmalıdır. Pekiyi yazma sırasında "cache miss" olursa ne yapılmalıdır? Burada iki strateji izlenebilir: 
+
+    -> Blok doğrudan yavaş belleğe yazılabilir. 
+    -> Blok önce cache'e çekilip yazma cache'e yapılabilir. Tabii burada aslında yavaş bellekteki bloğun cache'e çekilmesine gerek yoktur. Doğurdan yazma cache üzerine yapılabilir. 
+
+Bazen yazma sırasında "cache hit" olduğu durumda yazma işlemi hem cache'e ham de yavaş belleğe yapılabilmektedir. Böylece anomalilerde yavaş bellekte bir kayıp oluşmayacaktır.
+    * Örnek 1, Aşağıdaki örnekte daha önce yapmış olduğumuz disk cache simülasyonundaki cache sistemi read/write cache haline gtirilmiştir. 
+        /* filecache.h */
+            #ifndef FILECACHE_H_
+            #define FILECACHE_H_
+
+            /* Symbolic Constants */
+
+            #define LINE_SIZE               32
+            #define NCACHE_LINES            10
+            #define INITIAL_COUNT           2
+
+            #ifdef DEBUG
+            #define DEBUG_PRINT(fmt, ...)  fprintf(stderr, fmt, ## __VA_ARGS__)     
+            #else
+            #define DEBUG_PRINT(fmt, ...)       
+            #endif
+
+            /* Type Definitions */
+
+            typedef struct tagCACHELINE {
+                char buf[LINE_SIZE];
+                int blockno;
+                size_t count;
+                int dirty;
+            } CACHE_LINE;
+
+            typedef struct tagCACHE {
+                int fd;
+                CACHE_LINE clines[NCACHE_LINES];
+                size_t tcount;
+            } CACHE, *HCACHE;
+
+            /* Function Prototypes */
+
+            HCACHE open_disk(const char *path, int flags);
+            int read_disk(HCACHE hc, int blockno, void *buf);
+            int write_disk(HCACHE hc, int blockno, const void *buf);
+            int fluch_disk(HCACHE hc);
+            int close_disk(HCACHE hc);
+
+            #endif
+
+        /* filecahe.c */
+            #define DEBUG
+
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <string.h>
+            #include <fcntl.h>
+            #include <sys/stat.h>
+            #include <unistd.h>
+            #include "diskcache.h"
+
+            #ifdef DEBUG
+            static void print_cline_counts(HCACHE hc);
+            #endif
+
+            static size_t select_line(HCACHE hc);
+
+            HCACHE open_disk(const char *path, int flags)
+            {
+                HCACHE hc;
+                int i;
+
+                if ((hc = (HCACHE)malloc(sizeof(CACHE))) == NULL)
+                    return NULL;
+
+                if ((hc->fd = open(path, flags)) == -1) {
+                    free(hc);
+                    return NULL;
+                }
+
+                for (i = 0; i < NCACHE_LINES; ++i) {
+                    hc->clines[i].blockno = -1;
+                    hc->clines[i].count = 0;
+                    hc->clines[i].dirty = 0;
+                }
+                hc->tcount = 0;
+
+                return hc;
+            }
+
+            int read_disk(HCACHE hc, int blockno, void *buf)
+            {
+                int i;
+                int rline;
+
+                for (i = 0; i < NCACHE_LINES; ++i)
+                    if (hc->clines[i].blockno == blockno) {
+                        DEBUG_PRINT("Cache hit block %d, used cache line %d\n", blockno, i);
+
+                        memcpy(buf, hc->clines[i].buf, LINE_SIZE);
+                        ++hc->clines[i].count;
+                        ++hc->tcount;
+
+            #ifdef DEBUG
+                        print_cline_counts(hc);
+            #endif
+
+                        return 0;
+                    }
+
+                rline = select_line(hc);
+
+                if (hc->clines[rline].dirty) {
+                    if (lseek(hc->fd, hc->clines[rline].blockno * LINE_SIZE, SEEK_SET) == -1)
+                        return -1;
+                
+                    if (write(hc->fd, hc->clines[rline].buf, LINE_SIZE) == -1)
+                        return -1;
+
+                    hc->clines[rline].dirty = 0;
+                }
+
+                if (lseek(hc->fd, (off_t)blockno * LINE_SIZE, SEEK_SET) == -1)
+                    return -1;
+                
+                if (read(hc->fd, hc->clines[rline].buf, LINE_SIZE) == -1)
+                    return -1;
+
+                hc->clines[rline].blockno = blockno;
+
+                hc->clines[rline].count = hc->tcount / NCACHE_LINES + 1;
+                hc->tcount += hc->clines[rline].count;
+
+                memcpy(buf, hc->clines[rline].buf, LINE_SIZE);
+
+                DEBUG_PRINT("Cache miss block %d, used cache line %d\n", blockno, rline);
+
+            #ifdef DEBUG
+                print_cline_counts(hc);
+            #endif
+
+                return 0;
+            }
+
+            int write_disk(HCACHE hc, int blockno, const void *buf)
+            {
+                int rline;
+
+                for (int i = 0; i < NCACHE_LINES; ++i)
+                    if (hc->clines[i].blockno == blockno) {
+                        DEBUG_PRINT("Cache hit block %d, used cache line %d\n", blockno, i);
+
+                        memcpy(hc->clines[i].buf, buf, LINE_SIZE);
+                        ++hc->clines[i].count;
+                        ++hc->tcount;
+                        hc->clines[i].dirty = 1;
+
+                #ifdef DEBUG
+                        print_cline_counts(hc);
+                #endif
+
+                        return 0;
+                }
+
+                rline = select_line(hc);
+                if (hc->clines[rline].dirty) {
+                    if (lseek(hc->fd, hc->clines[rline].blockno * LINE_SIZE, SEEK_SET) == -1)
+                        return -1;
+                
+                    if (write(hc->fd, hc->clines[rline].buf, LINE_SIZE) == -1)
+                        return -1;
+                }
+                memcpy(hc->clines[rline].buf, buf, LINE_SIZE);
+                hc->clines[rline].blockno = blockno;
+                hc->clines[rline].count = hc->tcount / NCACHE_LINES + 1;
+                hc->clines[rline].dirty = 1;
+
+                DEBUG_PRINT("Cache miss block %d, used cache line %d\n", blockno, rline);
+
+            #ifdef DEBUG
+                print_cline_counts(hc);
+            #endif
+
+                return 0;
+            }
+
+            int flush_disk(HCACHE hc)
+            {
+                for (int i = 0; i < NCACHE_LINES; ++i) {
+                    if (hc->clines[i].dirty) {
+                        if (lseek(hc->fd, hc->clines[i].blockno * LINE_SIZE, SEEK_SET) == -1)
+                            return -1;
+                
+                        if (write(hc->fd, hc->clines[i].buf, LINE_SIZE) == -1)
+                            return -1;
+                    }
+                }
+
+                return 0;
+            }
+
+            int close_disk(HCACHE hc)
+            {
+                if (flush_disk(hc) == -1)
+                    return -1;
+
+                close(hc->fd);
+
+                DEBUG_PRINT("Cache closed!\n");
+
+                free(hc);
+
+                return 0;
+            }
+
+            static size_t select_line(HCACHE hc)
+            {
+                size_t min_count;
+                size_t min_index;
+                int i;
+
+                min_count = hc->clines[0].count;
+                min_index = 0;
+
+                for (i = 1; i < NCACHE_LINES; ++i) {
+                    if (hc->clines[i].count < min_count) {
+                        min_count = hc->clines[i].count;
+                        min_index = i;
+                    }
+                }
+
+                return min_index;
+            }
+
+            #ifdef DEBUG
+
+            static void print_cline_counts(HCACHE hc)
+            {
+                int i;
+
+                putchar('\n');
+                printf("Total count: %llu\n", (unsigned long long)hc->tcount);
+                for (i = 0; i < NCACHE_LINES; ++i)
+                    printf("Cachle Line %d --> Block: %d, Count: %llu, Dirty: %d\n", i, hc->clines[i].blockno, (unsigned long long)hc->clines[i].count, hc->clines[i].dirty);
+
+                putchar('\n');
+            }
+
+            #endif
+
+        /* filecache-test.c */
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <time.h>
+            #include <fcntl.h>
+            #include "diskcache.h"
+
+            int create_test_file(const char *path, int nblocks);
+
+            int main(void)
+            {
+                HCACHE hc;
+                char buf[32 + 1];
+                int rw;
+                int blockno;
+
+                if (create_test_file("test.dat", 100) == -1) {
+                    perror("create_test_file");
+                    exit(EXIT_FAILURE);
+                }
+                
+                if ((hc = open_disk("test.dat", O_RDWR)) == NULL) {
+                    fprintf(stderr, "cannot open file!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                for (;;) {
+                    printf("Block No:");
+                    scanf("%d", &blockno);
+                    if (blockno == -1)
+                        break;
+
+                    printf("(r)ead/(w)rite?");
+                    while (getchar() != '\n')
+                        ;
+                    rw = getchar();
+
+                    if (rw == 'r') {
+                        if (read_disk(hc, blockno, buf) == -1) {
+                            perror("read_file");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+                    else if (rw == 'w') {
+                        for (int k = 5; k < 32; ++k)
+                            buf[k] = rand() % 26 + 'A';
+                        if (write_disk(hc, blockno, buf) == -1) {
+                            perror("read_file");
+                            exit(EXIT_FAILURE);
+                        }
+                    }
+                    else {
+                        printf("invalid operation!...\n");
+                        continue;
+                    }
+
+                    buf[32] = '\0';
+                    printf("Block content: %s\n\n", buf);
+                }
+
+                close_disk(hc);
+
+                return 0;
+            }
+
+            int create_test_file(const char *path, int nblocks)
+            {
+                FILE *f;
+                int i, k;
+                char buf[LINE_SIZE];
+
+                srand(time(NULL));
+                if ((f = fopen(path, "wb")) == NULL)
+                    return -1;
+
+                for (i = 0; i < nblocks; ++i) {
+                    sprintf(buf, "%04d ", i);
+                    for (k = 5; k < 32; ++k)
+                        buf[k] = rand() % 26 + 'A';
+
+                    if (fwrite(buf, LINE_SIZE, 1, f) != 1)
+                        return -1;
+                }
+
+                fclose(f);
+            }
+
+
+> Hatırlatıcı Notlar:
+    >> Bazen "cache" sözcüğü ile "buffer (tampon)" sözcükleri biribirine karıştırılmaktadır. Cache sistemleri hızlandırma amacıyla
+    kullnılan sistemlerdir. Halbuki buffer mekanizması "bilgileri sırası bozulmadan geçici süre tutmak için oluşturulmuş" sistemlerdir

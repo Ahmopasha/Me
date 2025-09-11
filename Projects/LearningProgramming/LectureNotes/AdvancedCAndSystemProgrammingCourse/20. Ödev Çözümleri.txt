@@ -1,0 +1,593 @@
+> Homework - 1, Çözüm: Cümleyi kelimelerine ayırtmak.
+    * Örnek 1, Aşağıdaki örnekte büyütme birer birer yapılmaktadır. Sadece cümlenin kendisi için dinamik bellek yönetimi uygulanmıştır.
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+
+        #define CHUNK_SIZE      5
+
+        char** split(char* str, const char* delim);
+
+        int main(void)
+        {
+            char names[] = "Ahmet Kandemir Pehlivanli, Ulya Yürük";
+            char** strs;
+            int i; 
+            
+            if((strs = split(names, ", ")) == NULL)
+            {
+                fprintf(stderr, "cannot split!...\n");
+                exit(EXIT_FAILURE);
+            }
+            
+            for(i = 0; strs[i] != NULL; ++i)
+            {
+                puts(strs[i]);    
+            }
+            
+            free(strs);
+            return 0;
+        }
+
+        char** split(char* str, const char* delim)
+        {
+            char* pos;
+            char** strs, **temp;
+            size_t count = 0;
+            
+            if((strs = (char**)malloc(sizeof(char*))) == NULL)
+                return NULL;
+            
+            for(pos = strtok(str, delim); pos != NULL; pos = strtok(NULL, delim))
+            {
+                strs[count++] = pos;
+                temp = (char**)realloc(strs, (count + 1) * sizeof(char*));
+                if(temp == NULL){
+                    free(strs);
+                    return NULL;
+                }
+                strs = temp;
+            }
+            
+            strs[count] = NULL;
+            
+            return strs;
+        }
+
+    * Örnek 2, Aşağıdaki örnekte "CHUNK_SIZE" kadarlık arttırma yapılmıştır. Sadece cümlenin kendisi için dinamik bellek yönetimi uygulanmıştır.
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+
+        #define CHUNK_SIZE      5
+
+        char** split(char* str, const char* delim);
+
+        int main(void)
+        {
+            char names[] = "Ahmet Kandemir Pehlivanli, Ulya Yürük";
+            char** strs;
+            int i; 
+            
+            if((strs = split(names, ", ")) == NULL)
+            {
+                fprintf(stderr, "cannot split!...\n");
+                exit(EXIT_FAILURE);
+            }
+            
+            for(i = 0; strs[i] != NULL; ++i)
+            {
+                puts(strs[i]);    
+            }
+            
+            free(strs);
+            return 0;
+        }
+
+        char** split(char* str, const char* delim)
+        {
+            char* pos;
+            char** strs, **temp;
+            size_t count = 0;
+            
+            if((strs = (char**)malloc(sizeof(char*) * CHUNK_SIZE)) == NULL)
+                return NULL;
+            
+            for(pos = strtok(str, delim); pos != NULL; pos = strtok(NULL, delim))
+            {
+                strs[count++] = pos;
+                if(count % CHUNK_SIZE == 0){
+                    temp = (char**)realloc(strs, (count + CHUNK_SIZE) * sizeof(char*));
+                    if(temp == NULL){
+                        free(strs);
+                        return NULL;
+                    }
+                    strs = temp;
+                }
+            }
+            
+            strs[count] = NULL;
+            
+            return strs;
+        }
+
+    * Örnek 3, Aşağıdaki örnekte ise cümlenin kendisi ve her bir kelimesi için dinamik bellek yönetimi uygulanmıştır. 
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+
+        #define CHUNK_SIZE      5
+
+        char** split2(const char* str, const char* delim);
+
+        int main(void)
+        {
+            char names[] = "Ahmet Kandemir Pehlivanli, Ulya Yürük";
+            char** strs;
+            int i; 
+            
+            if((strs = split2(names, ", ")) == NULL)
+            {
+                fprintf(stderr, "cannot split!...\n");
+                exit(EXIT_FAILURE);
+            }
+            
+            for(i = 0; strs[i] != NULL; ++i)
+            {
+                puts(strs[i]);    
+            }
+            
+                for(i = 0; strs[i] != NULL; ++i)
+            {
+                free(strs[i]);    
+            }
+            
+            free(strs);
+            return 0;
+        }
+
+        char** split2(const char* str, const char* delim)
+        {
+            char* pos, *strbuf;
+            char** strs, **temp;
+            size_t count = 0;
+            
+            /* Dinamik bellek yönetimi + ilgili yazının kopyalanması. */
+            if((strbuf = strdup(str)) == NULL)
+                return NULL;
+                
+            if((strs = (char**)malloc(sizeof(char*) * CHUNK_SIZE)) == NULL)
+                return NULL;
+            
+            for(pos = strtok(strbuf, delim); pos != NULL; pos = strtok(NULL, delim))
+            {
+                if((strs[count++] = strdup(pos)) == NULL){
+                    free(strbuf);
+                    return NULL;
+                }
+                
+                if(count % CHUNK_SIZE == 0){
+                    temp = (char**)realloc(strs, (count + CHUNK_SIZE) * sizeof(char*));
+                    if(temp == NULL){
+                        free(strbuf);
+                        free(strs);
+                        return NULL;
+                    }
+                    strs = temp;
+                }
+            }
+            
+            strs[count] = NULL;
+            
+            free(strbuf);
+            
+            return strs;
+        }
+
+> Homework - 2, Çözüm: Geçici dosya kullanımı. 
+    * Örnek 1, Aşağıdaki kodda hata nedenleri teker teker özel olarak ele alınmıştır. 
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <time.h>
+        #include <stdbool.h>
+
+        #define RANDOM_FILE_PATH    "random.dat"
+        #define RESULT_FILE_PATH    "result.dat"
+        #define EPOCH               100000
+        #define TOTAL_PART          1
+        #define EACH_PART           (EPOCH / TOTAL_PART)
+
+        typedef struct tagMERGE_INFO{
+            FILE* f;
+            int current_value;
+        }MERGE_INFO;
+
+        FILE * create_random_file(void);
+        void bubble_sort(int* array, size_t size);
+        size_t getmin_index(const MERGE_INFO* mi, size_t size);
+        bool is_sorted(FILE* f);
+
+        int main(void)    
+        {
+            /* 
+                # OUTPUT #
+                Success
+            */
+            
+            FILE* f;
+            if((f = create_random_file()) == NULL){
+                fprintf(stderr, "Cannot create/write random file!..\n");
+                exit(EXIT_FAILURE);
+            }
+            
+            FILE* fd;
+            if((fd = fopen(RESULT_FILE_PATH, "w+b")) == NULL){
+                fprintf(stderr, "Cannot create result file!..\n");
+                exit(EXIT_FAILURE);
+            }
+            
+            int* array;
+            if((array = (int*)malloc(EACH_PART * sizeof(int))) == NULL){
+                fprintf(stderr, "Cannot allocate memory!..\n");
+                exit(EXIT_FAILURE);
+            }
+            
+            rewind(f);
+            
+            MERGE_INFO mi[TOTAL_PART];
+            
+            for(int i = 0; i < TOTAL_PART; ++i){
+                if(fread(array, sizeof(int), EACH_PART, f) != EACH_PART){
+                    fprintf(stderr, "Cannot read random file!..\n");
+                    exit(EXIT_FAILURE);
+                }
+                
+                bubble_sort(array, EACH_PART);
+                
+                if((mi[i].f = tmpfile()) == NULL){
+                    fprintf(stderr, "Cannot create temporary file!..\n");
+                    free(array);
+                    exit(EXIT_FAILURE);
+                }
+                
+                if(fwrite(array, sizeof(int), EACH_PART, mi[i].f) != EACH_PART){
+                    fprintf(stderr, "Cannot write temporary file!..\n");
+                    free(array);
+                    exit(EXIT_FAILURE);             
+                }
+                
+                rewind(mi[i].f);
+                if(fread(&mi[i].current_value, sizeof(int), 1, mi[i].f) != 1){
+                    fprintf(stderr, "Cannot read temporary file!..\n");
+                    free(array);
+                    exit(EXIT_FAILURE);           
+                }
+            }
+            
+            size_t size = TOTAL_PART;
+            size_t min_index;
+            while(size > 0){
+                min_index = getmin_index(mi, size);
+                if(fwrite(&mi[min_index].current_value, sizeof(int), 1, fd) != 1){
+                    fprintf(stderr, "Cannot write result file!..\n");
+                    free(array);
+                    exit(EXIT_FAILURE);             
+                }
+                
+                if(fread(&mi[min_index].current_value, sizeof(int), 1, mi[min_index].f) != 1){
+                    if(ferror(mi[min_index].f)){
+                        fprintf(stderr, "Cannot create temporary file!..\n");
+                        free(array);
+                        exit(EXIT_FAILURE);                
+                    }
+                    
+                    fclose(mi[min_index].f);
+                    mi[min_index] = mi[size - 1];
+                    --size;
+                }
+            }
+            
+            printf(is_sorted(fd) ? "Success\n" : "Failed!\n");
+            
+            free(array);
+            return 0;
+        }
+
+        FILE * create_random_file(void)
+        {
+            srand(time(NULL));
+            
+            FILE *f;
+            if((f = fopen(RANDOM_FILE_PATH, "w+b")) == NULL)
+                return NULL;
+            
+            /*
+            * "fwrite" kullandığımız için bütün rakamlar
+            * "sizeof int" kadar yer kaplayacaktı. Eğer 
+            * "fprintf" kullansaydık, rakamları yazıya 
+            * dönüştürüp yazacaktı. Bu durumda da her bir
+            * rakam farklı miktarda bayt kaplayacaktı, 
+            * kaç basamaklı olduğuna göre.
+            */
+            int val;
+            for(int i = 0; i < EPOCH; ++i) {
+                val = rand();
+                if(fwrite(&val, sizeof(int), 1, f) != 1){
+                    fclose(f);
+                    return NULL;
+                }
+            }
+
+            return f;
+        }
+
+        void bubble_sort(int* array, size_t size)
+        {
+            size_t temp;
+            for(size_t i = 0; i < size - 1; ++i)
+                for(size_t k = 0; k < size - 1 - i; ++k)
+                    if(array[k] > array[k + 1]){
+                        temp = array[k];
+                        array[k] = array[k+1];
+                        array[k+1] = temp;
+                    }
+        }
+
+        size_t getmin_index(const MERGE_INFO* mi, size_t size)
+        {
+            size_t min_index = 0;
+            for(size_t i = 1; i < size; ++i){
+                if(mi[i].current_value < mi[min_index].current_value)
+                    min_index = i;
+            }
+            
+            return min_index;
+        }
+
+        bool is_sorted(FILE* f)
+        {
+            rewind(f);
+            
+            int val, next_val;
+            
+            next_val = -1;
+            
+            while(fread(&next_val, sizeof(int), 1, f) == 1){
+                if(next_val < val)
+                    return false;
+                
+                val = next_val;
+            }
+
+            if(ferror(f)) 
+                return false;
+                
+            return ftell(f) / sizeof(int) == EPOCH;
+        }
+
+    * Örnek 2, Aşağıdaki örnekte ise hata nedenleri "goto" deyimleri kullanılarak biraz daha 
+    düzenli hale getirilmiştir.
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <time.h>
+        #include <stdbool.h>
+
+        #define RANDOM_FILE_PATH    "random.dat"
+        #define RESULT_FILE_PATH    "result.dat"
+        #define EPOCH               100000
+        #define TOTAL_PART          100
+        #define EACH_PART           (EPOCH / TOTAL_PART)
+
+        typedef struct tagMERGE_INFO{
+            FILE* f;
+            int current_value;
+        }MERGE_INFO;
+
+        FILE * create_random_file(void);
+        void bubble_sort(int* array, size_t size);
+        size_t getmin_index(const MERGE_INFO* mi, size_t size);
+        bool is_sorted(FILE* f);
+
+        int main(void)    
+        {
+            /* 
+                # OUTPUT #
+                Success
+            */
+            int status = EXIT_FAILURE;
+
+            FILE* f;
+            if((f = create_random_file()) == NULL){
+                fprintf(stderr, "Cannot create/write random file!..\n");
+                goto EXIT_I;
+            }
+            
+            FILE* fd;
+            if((fd = fopen(RESULT_FILE_PATH, "w+b")) == NULL){
+                fprintf(stderr, "Cannot create result file!..\n");
+                goto EXIT_II;
+            }
+            
+            int* array;
+            if((array = (int*)malloc(EACH_PART * sizeof(int))) == NULL){
+                fprintf(stderr, "Cannot allocate memory!..\n");
+                goto EXIT_III;
+            }
+            
+            rewind(f);
+            
+            MERGE_INFO mi[TOTAL_PART];
+            
+            for(int i = 0; i < TOTAL_PART; ++i){
+                if(fread(array, sizeof(int), EACH_PART, f) != EACH_PART){
+                    fprintf(stderr, "Cannot read random file!..\n");
+                    goto EXIT_IV;
+                }
+                
+                bubble_sort(array, EACH_PART);
+                
+                if((mi[i].f = tmpfile()) == NULL){
+                    fprintf(stderr, "Cannot create temporary file!..\n");
+                    goto EXIT_IV;
+                }
+                
+                if(fwrite(array, sizeof(int), EACH_PART, mi[i].f) != EACH_PART){
+                    fprintf(stderr, "Cannot write temporary file!..\n");
+                    goto EXIT_IV;            
+                }
+                
+                rewind(mi[i].f);
+                if(fread(&mi[i].current_value, sizeof(int), 1, mi[i].f) != 1){
+                    fprintf(stderr, "Cannot read temporary file!..\n");
+                    goto EXIT_IV;         
+                }
+            }
+            
+            size_t size = TOTAL_PART;
+            size_t min_index;
+            while(size > 0){
+                min_index = getmin_index(mi, size);
+                if(fwrite(&mi[min_index].current_value, sizeof(int), 1, fd) != 1){
+                    fprintf(stderr, "Cannot write result file!..\n");
+                    goto EXIT_IV;            
+                }
+                
+                if(fread(&mi[min_index].current_value, sizeof(int), 1, mi[min_index].f) != 1){
+                    if(ferror(mi[min_index].f)){
+                        fprintf(stderr, "Cannot create temporary file!..\n");
+                        goto EXIT_IV;              
+                    }
+                    
+                    fclose(mi[min_index].f);
+                    mi[min_index] = mi[size - 1];
+                    --size;
+                }
+            }
+
+            
+            printf(is_sorted(fd) ? "Success\n" : "Failed!\n");
+            
+            status = EXIT_SUCCESS;
+
+        EXIT_IV:
+            free(array);    
+        EXIT_III: 
+            if(remove(RESULT_FILE_PATH) != 0)
+                fprintf(stderr, "cannot remove result file!...\n");
+        EXIT_II: 
+            if(remove(RANDOM_FILE_PATH) != 0)
+                fprintf(stderr, "cannot remove random file!...\n");
+        EXIT_I:
+            return status;
+        }
+
+        FILE * create_random_file(void)
+        {
+            srand(time(NULL));
+            
+            FILE *f;
+            if((f = fopen(RANDOM_FILE_PATH, "w+b")) == NULL)
+                return NULL;
+            
+            /*
+            * "fwrite" kullandığımız için bütün rakamlar
+            * "sizeof int" kadar yer kaplayacaktı. Eğer 
+            * "fprintf" kullansaydık, rakamları yazıya 
+            * dönüştürüp yazacaktı. Bu durumda da her bir
+            * rakam farklı miktarda bayt kaplayacaktı, 
+            * kaç basamaklı olduğuna göre.
+            */
+            int val;
+            for(int i = 0; i < EPOCH; ++i) {
+                val = rand();
+                if(fwrite(&val, sizeof(int), 1, f) != 1){
+                    fclose(f);
+                    return NULL;
+                }
+            }
+
+            return f;
+        }
+
+        void bubble_sort(int* array, size_t size)
+        {
+            size_t temp;
+            for(size_t i = 0; i < size - 1; ++i)
+                for(size_t k = 0; k < size - 1 - i; ++k)
+                    if(array[k] > array[k + 1]){
+                        temp = array[k];
+                        array[k] = array[k+1];
+                        array[k+1] = temp;
+                    }
+        }
+
+        size_t getmin_index(const MERGE_INFO* mi, size_t size)
+        {
+            size_t min_index = 0;
+            for(size_t i = 1; i < size; ++i){
+                if(mi[i].current_value < mi[min_index].current_value)
+                    min_index = i;
+            }
+            
+            return min_index;
+        }
+
+        bool is_sorted(FILE* f)
+        {
+            rewind(f);
+            
+            int val, next_val;
+            
+            next_val = -1;
+            
+            while(fread(&next_val, sizeof(int), 1, f) == 1){
+                if(next_val < val)
+                    return false;
+                
+                val = next_val;
+            }
+
+            if(ferror(f)) 
+                return false;
+                
+            return ftell(f) / sizeof(int) == EPOCH;
+        }
+
+                      CloseHandle     - close
+
+
+
+
+    
+
+
+    
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+    
+
+
+
+
+
+
+
+
+
+
+

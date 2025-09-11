@@ -1,0 +1,516 @@
+> Standart C fonksiyonları, POSIX fonksiyonları ve Windows API fonksiyonları: Standart C fonksiyonları demek bütün C derleyicilerinde 
+bulunması gereken fonksiyonlar demektir. POSIX fonksiyonları ise bütün UNIX türevi sistemlerde bulunması gereken fonksiyonlarıdır. 
+Dolayısıyla bu fonksiyonları Windows ailesinde kullanamayız. Windows API fonksiyonları ise Windows işletim sistemine özgü olan 
+fonksiyonlardır. Bu fonksiyonları da UNIX türevi sistemlerde kullanamayız. Dolayısıyla bu üç fonksiyonlar arasından taşınabilirliği 
+en çok olan Standart C fonksiyonlarıdır çünkü hem Windows ailesinde hem de UNIX türevi sistemlerde kullanılabilir. Daha sonra POSIX 
+ve Windows API fonksiyonları gelir ki bu iki fonksiyon ailesi aslında birbiri ile aynı kotadadır, yani her biri kendi ailesine özgüdür. 
+En sonunda da işletim sisteminin sistem fonksiyonları gelir ki bu fonksiyonlar aslında işletim sistemine özgüdür. Hatta aynı işletim 
+sisteminin farklı versiyonları arasında değişiklik bile görülebilir.
+    >> Sistem Fonksiyonları: Sistem fonksiyonları aslında o işletim sisteminin çekirdeğinde yer alır. Bazıları dışarıdan çağrılabilir
+    durumdayken, bazılarını dışarıdan çağıramayız. Dolayısıyla iş bu sistem fonksiyonları, işletim sistemi ile geliştirilen uygulama
+    arasında bir köprü vazifesi görmektedir. Örneğin, dosya açma işlemini ele alalım. İster C#, ister Java, ister C++ ile bir dosya
+    açmak isteyelim. Eninde sonunda bu dillerdeki ilgili fonksiyonlar, işletim sisteminin sistem fonksiyonlarını çağırmaktadır. Çağrılan
+    bu sistem fonksiyonları ilgili dosyayı açmaktadır. Bu iş işletim sisteminin sorumluluğunda, programlama dilleri ise bir nevi
+    "wrapper" olarak işlev görmektedir. Fakat bu demek değildir ki o programlama dilindeki bütün fonksiyonlar aslında bir sistem
+    fonksiyonunu çağırır. Örneğin, bir yazının uzunluğunu bulan bir fonksiyon. Böyle bir fonksiyonun sistem fonksiyonu ile işi yoktur.
+    Özetle sistem fonksiyonlarını çağırmak, işletim sistemine, o işin yapılması için rica etmek demektir.  
+    
+    >> POSIX Fonksiyonları: UNIX türevi sistemlerde ortak arayüz oluşturan fonksiyonlardır. Seviye olarak sistem fonksiyonlarından 
+    yüksektir. Örneğin, "open" fonksiyonunu ele alalım. Bu fonksiyon Linux sistemlerinde o işletim sistemindeki sistem fonksiyonlarını
+    çağırırken, macOS sistemlerde ise o işletim sistemindeki sistem fonksiyonlarını çağırmaktadır. Böylelikle UNIX türevi sistemlerde 
+    bir taşınabilirlik sağlanmış oluyor. Bazı POSIX fonksiyonları hiç sistem fonksiyonu çağırmazken, bazıları birden fazla sistem 
+    fonksiyonu çağırabilir. 
+    
+    >> Windows API Fonksiyonları: POSIX fonksiyonlarının Windows ailesindeki karşılığıdır, diyebiliriz. POSIX fonksiyonlarından 
+    farklılıkları vardır fakat amaçları Windows ailesi arasında arayüz oluşturmaktır. Yine POSIX fonksiyonlarında olduğu gibi 
+    bazıları sistem fonksiyonu çağırmazken, bazıları birden fazlasını çağırmaktadır. 
+    
+    >> Standart C Fonksiyonları: Her C derleyicisinde bulunan fonksiyonlardır. UNIX türevi sistemlerde POSIX fonksiyonlarını çağırırken,
+    Windows ailesinde ise Windows API fonksiyonlarını çağırmaktadır. Örneğin, "fopen" isimli Standart C fonksiyonu UNIX türevi 
+    sistemlerde "open" isimli POSIX fonksiyonunu çağırırken, Windows ailesinde "CreateFile" isimli Windows API fonksiyonunu 
+    çağırmaktadır. Bu fonksiyonlarda ilgili sistem fonksiyonlarını çağırmaktadır. Tabii bu demek değildir ki Standart C fonksiyonları 
+    sadece bu çağrıları yapmaktadır; yine ek işlerde yapmaktadır.   
+
+Eğer işimizi Standart C fonksiyonları görüyorsa, o fonksiyonları kullanmalıyız. Eğer yeterli gelmiyorsa Windows için Windows API, UNIX için POSIX fonksiyonlarını kullanmalıyız. Eğer 
+bunlar da yeterli gelmiyorsa, ilgili işletim sisteminin sistem fonksiyonlarını çağırmalıyız. Örneğin, bir oluşturmak isteyelim. Standar 
+C fonksiyonlarından işimizi görecek bir fonksiyon yoktur. Dolayısıyla Windows ailesinde "CreateDirectory", UNIX dünyasında ise "mkdir"
+isimli fonksiyonu çağırmalıyız. Şimdi de bu Windows API ve POSIX fonksiyonlarını sırasıyla inceleyelim:
+    >> Windows API Fonksiyonları Hakkında Temel Bilgiler: Bu fonksiyonların çok büyük çoğunluğu "windows.h" isimli başlık dosyasını 
+    projemize dahil etmeliyiz. Windows dünyasında dosya isimlerinin büyük harf duyarlılığı yoktur. Yani işleme sokulan "test.txt" ile 
+    "TesT.txt" dosyaları aynı dosya kabul edilir. Sadece dosya ismini saklarken büyük harfleri de kullanır. Yani bir dosyaya "TEST.txt"
+    biçiminde isim versek, "TEST.txt" biçiminde saklanır. Dolayısıyla "Windows.h" ile "windows.h" arasında bir fark yoktur. Öte yandan 
+    bu fonksiyonlar hakkında bilgi almak için "msdn" sisteminden destek alabiliriz. Öte yandan yazı parametresi alan bazı Windwows API
+    fonksiyonları "xxxA" ve "xxxW" biçimindedir. Bizler bu tip fonksiyonları kullanırken "xxx" biçiminde kullanacağız fakat ön işlemci
+    programı bu fonksiyon çağrısını "xxxA" veya "xxxW" haline çevirmektedir. Sonu "A" ile bitenler "ASCII" karakter kodu isterken, sonu
+    "W" ile bitenler "UNICODE" istemektedir. Ön işlemci programının hangisine dönüştürmesini istiyorsak, projemizin "Properties" 
+    kısmına gelip "Configuration Properties/Advanced" bölümündeki "Character Set" isimli özelliği "Not Set" olarak değiştirmeliyiz. 
+    Böylelikle "ASCII" isteyen versiyona çevirecektir. Burada dikkat etmemiz gereken şey "xxx" isminde bir fonksiyonun olmadığı, 
+    sadece kullanım olarak "xxx" biçimiyle kullandığımızdır. Ön işlemci programı yukarıdaki ayara göre "xxxA" veya "xxxW" haline 
+    getirmektedir. Diğer yandan Windows ailesi arasında taşınabilirliği daha arttırmak ve okunabilirliği kolaylaştırmak adına Microsoft
+    firması çeşitli "typedef" isimler oluşturmuştur. Bu isimlere aşina olunmalıdır. Bu tür isimlerin hepsi BÜYÜK HARFLERLE ile 
+    oluşturulmuştur. Dolayısıyla kendi fonksiyonlarımızı yazarken de mümkün olduğunca bu isimleri kullanmalıyız. Bu isimler "windows.h"
+    içerisinde tanımlanmıştır. En önemlileri şunlardır: "BYTE", "WORD", "DWORD", "QWORD".
+        >>> "BYTE" : 1 bayt uzunlukta, işaretsiz tam sayı türünün eş ismidir. Tipik olarak "unsigned char". 
+
+        >>> "WORD" : 2 bayt uzunlukta, işaretsiz tam sayı türünün eş ismidir. Tipik olarak "unsigned short".  
+        
+        >>> "DWORD": 4 bayt uzunlukta, işaretsiz tam sayı türünün eş ismidir. Tipik olarak "unsigned int".
+        
+        >>> "QWORD": 8 bayt uzunlukta, işaretsiz tam sayı türünün eş ismidir. Tipik olarak "unsigned long long int".
+    
+    Adres türleri ile başına "P" yada "LP" öneki almaktadır ("16-bit" Windows sistemlerde "P" demek "near-pointer", "LP" demek 
+    "far-pointer" anlamındadır. Ancak "32-bit" sistemlerle birlikte bu ayrım ortadan kalkmıştır. Dolayısıyla "P" ve "LP" önekleri 
+    arasında bir fark kalmamıştır. Geleneksel olarak "LP" öneki tercih edilmektedir). Eğer gösterici "const" ise "P" veya "LP" 
+    öneklerinden sonra "C" öneki gelmektedir. Dolayısıyla "PC" veya "LPC" önekleri kullanılır. Göstericinin türü ise bu öneklerden 
+    hemen sonra gelmektedir. Burada,
+        >>> "LPCDWORD" demek "const DWORD*" anlamına gelmektedir.
+        
+        >>> "LPDWORD" demek "DWORD*" anlamına gelmektedir. 
+        
+        >>> "void" türü "VOID" olarak nitelendiği için, "LPVOID" demek "void*" demektir. "LPCVOID" ise "const void*" demektir. Öte 
+        yandan "HANDLE" tür ismi de "void*" demektir.  
+    
+    Eğer göstericimiz bir yazıyı gösteriyorsa, "STR" öneki kullanılmaktadır. Yani,
+        >>> "LPSTR" demek ise "char*" demektir. Eğer "ASCII" seçeneği seçilmişse. 
+    
+        >>> "LPCSTR" demek ise "const char*" demektir. Eğer "ASCII" seçeneği seçilmişse.  
+    
+        >>> "LPTSTR" demek ise "char*" demektir. Eğer "UNICODE" seçeneği seçilmişse.
+    
+        >>> "LPCTSTR" demek ise "const char*" demektir. Eğer "UNICODE" seçeneği seçilmişse. 
+    
+    C dilindeki diğer standart türler de "typedef" edilmiştir. Örneğin, "INT", "LONG", "CHAR", "DOUBLE" vb. isimler orjinal türlerinin 
+    eş ismidir.
+    Yapı türleri ise yine büyük harfle "typedef" edilmiştir. Fakat yapının kendisini "tag" ön eki getirilmiştir. Yani,
+        >>> "SAMPLE" demek "struct tagSAMPLE" demektir. Dolayısıyla bizler "SAMPLE" da kullanabiliriz "tagSAMPLE" da. Bu yapı türünden
+        göstericiler de yine başına "LP" / "P" / "PC" / "LPC" ön ekleri almaktadır.  
+    
+    "BOOL" demek de aslında "int" demektir. Bir API fonksiyonunun bu türden değer döndürmesi, başarı/başarısızlık anlamı vermektedir.    
+    Diğer yandan Windows API fonksiyonları kullanan programlar, isimlendirme sistemi olarak "Macar Notasyonu (Hungarian Notation)"
+    denilen bir sistem kullanmaktadır. Fakat bu notasyon bazı programcılar tarafından daha gevşek kullanılmaktadır. 
+        >>> Macar Notasyonu : Değişkenin isminin başına ön ek olarak o değişkenin türünü belirten şeyler yazmaktır. En belirgin 
+        özelliklerinden birisi budur. Örneğin,
+            >>>> "b" demek "BYTE" veya "BOOL" demektir.
+            
+            >>>> "w" demek "WORD" demektir.
+            
+            >>>> "dw" demek "DWORD" demektir.
+            
+            >>>> "p" / "lp" demek gösterici demektir.
+            
+            >>>> "sz" demek elemanları "CHAR" türden olan dizi demektir. 
+            
+            >>>> "psz" / "lpsz" demek "CHAR" türden yazı belirten bir gösterici. 
+            
+            >>>> "pc" / "lpc" demek "CHAR" türden bir gösterici. 
+            
+            >>>> "h" demek "HANDLE" demektir. 
+            
+            >>>> "l", "u", "lu" demek de sırasıyla "LONG", "UNSIGNED INT" ve "UNSIGNED LONG" demektir. 
+            
+            >>>> Yapı türleri için, o yapıya ilişkin kısa kelimeler kullanılmaktadır. Örneğin, "rect" demek "RECT" yapısını 
+            belirtmektedir. 
+            
+            >>>> Değişken isimleri, onun türünü belirten ön ekten sonra, her sözcüğün ilk harfi büyük yazılarak isimlendirilmektedir. 
+            Örneğin, 
+
+                DWORD dwNumberOfSectors;
+                LONG lStudentNumber;
+                LPSTR lpszFileName;
+
+            Eğer değişken isimlendirmesinde Macar Notasyonu kullanılmayacaksa, "Deve Notasyonu (Camel Casting)" kullanılmalıdır.
+                >>>>> "Deve Notasyonu" : Değişken ismi tek sözcükten oluşuyorsa tamamının küçük harfle yazılması, birden fazla 
+                sözcükten oluşuyorsa sadece ilk sözcüğün tamamının küçük harfle diğer sözcüklerin de sadece ilk harflerinin büyük 
+                harfle yazılmasıdır. Örneğin,
+
+                    int counter;
+                    int numberOfStudents;
+
+            Görüldüğü üzere Macar Notasyonundaki değişken isimleri uzun olma eğilimdedir. Bu da programcıları yormaktadır.
+            >>>> Fonksiyon isimlerinde de "Pascal Casting" kullanılır. 
+                >>>>> "Pascal Casting": Her sözcüğün ilk harfi büyük yazılır. Birden fazla sözcük içermesi durumunda ilk olarak 
+                yapılacak fiili anlatan, daha sonra bu fiilden etkilenen nesneye ilişkin sözcük yazılır. Örneğin, "CreateFile",
+                "SetWindowText" vb. 
+
+    Diğer yandan Windows API fonksiyonlarının bulunduğu kütüphane dosyaları, C ve C++ derleyicileri tarafından otomatik olarak 
+    referans edilmektedir. Dolayısıyla bu fonksiyonları kullanırken özel bir şey yapmamıza gerek yoktur. 
+
+    >> POSIX Fonksiyonları Hakkında Temel Bilgiler: Bu tip fonksiyonlar çeşitli başlık dosyalarına dağılmış durumdadır fakat 
+    genel olarak bir çoğu "unistd.h" başlık dosyasında toplanmıştır. İsimlendirme olarak C notasyonu kullanılır ki bu notasyonda 
+    sözcükler "_" ile birbirinden ayrılır ve büyük harf kullanılmaz. Windows API fonksiyonlarındakiler gibi "typedef" çok fazla
+    yoktur, olanlar da "sys/types.h" başlık dosyasındadır. İsimlerin sonuna gelen "_t" son ek, ilgili ismin bir "typedef" olduğunu 
+    belirtmektedir. Örneğin, "pid_t", "pthread_mutex_t" vs. Diğer yandan POSIX fonksiyonlarının kullanılabilmesi için genellikle 
+    özel bir kütüphaneye referans verilmesine gerek yoktur. Fakat bazı POSIX fonksiyonları başka kütüphaneler içerisinde olduğu için 
+    ilgili kütüphaneyi referans etmeliyiz. Bunu da komut satırından derlerken uygun seçenekleri belirtmeliyiz.  
+
+    >> Fonksiyonların çağrılmasında hata kontrolü: Sistem programlamada fonksiyonların başarısının test edilmesi önemli bir yer 
+    kaplamaktadır. Burada fonksiyonları üç gruba ayırabiliriz: Her daim hata kontrolü yapmamız gereken fonksiyonlar, eğer her şeyi 
+    doğru yaptıysak zaten doğru çalışacak olan fonksiyonlar ve başarı kontrolünün mümkün olmadığı fonksiyonları. Buradaki ilk grubu
+    daima test ederken, ikinci grup opsiyoneldir. Örneğin, "malloc", "fopen" gibi fonksiyonları daima test etmeliyiz. Bizler her şeyi
+    doğru yapmış olsak bile sistemdeki aksaklıktan dolayı bu fonksiyon yine başarısız olabilir. Diğer yandan "fclose" gibi bir fonksiyonu
+    test etmeye lüzum yoktur. Çünkü bu fonksiyona geçilen argümanı bizler bozmamışsak, fonksiyonu test etmeye lüzum yoktur. Hakeza
+    "free" gibi bir fonksiyonun başarısını da test edemeyiz. Fonksiyonların başarısızlığının tespiti ne kadar önemliyse, başarısızlık 
+    nedenlerinin tespit edilmesi de bir o kadar önemlidir. Dolayısıyla başarısız olan bir fonksiyonun neden başarısız olduğunu da 
+    programcıya iletmeliyiz ki ilgili kullanıcı telafi edebilme imkanı bulabilsin. Şimdi de Windows API ve POSIX fonksiyonlarının 
+    başarısız olma nedenlerini inceleyelim;
+        >>> Windows API Fonksiyonları: "GetLastError" fonksiyonunu, ilgili fonksiyon başarısız olduğunda çağırmalıyız. Çünkü bu 
+        fonksiyon en son başarısız olan fonksiyonu baz almaktadır. "thread-safe" bir fonksiyondur. "thread" konusuna ileride 
+        değinilecektir.
+            >>>> "GetLastError" : Fonksiyonun prototipi aşağıdaki gibidir;
+
+                DWORD GetLastError(void);
+
+            Fonksiyonun geri dönüş değerinin türü, hata kodunun nedenine ilişkin rakamsal bir değerdir. Her bir hata kodu için farklı 
+            bir değer döndürülmektedir. Aynı zamanda bu değerler, "windows.h" başlık dosyası içinde "ERROR_" ön ekiyle "#define" 
+            edilmişlerdir ki okunabilirlik artsın.
+                *  Örnek 1, Aşağıdaki örnekte "CreateFile" fonksiyonunun başarısız olma nedeni ekrana yazdırılmıştır. 
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <windows.h>
+
+                    int main(void)    
+                    {
+                        /* 
+                            # OUTPUT #
+                            CreateFile failed: 2
+                        */
+                    
+                        HANDLE hFile;
+                        if((hFile = CreateFile("test.xxx", GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE) {
+                            fprintf(stderr, "CreateFile failed: %lu\n", GetLastError());
+                            exit(EXIT_FAILURE);
+                        }
+                        
+                        puts("Ok");
+                        
+                        return 0;
+                    }
+
+        Öte yandan Windows sistemlerinde, belli bir API fonksiyonunun başarısızlık durumunda hangi değerleri döndüreceği belirtilmemiştir.
+        Bu nedenden dolayı Windows programcıları "GetLastError" ile elde ettikleri sayısal değeri bir "switch-case" içerisinde
+        kullanamamaktadır. Böylesi bir durumda ilgili hata kodunun ne anlama geldiğine aşağıdaki internet sitesinden bakılabilir:
+
+            https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes
+
+        Diğer yandan "GetLastError" ile elde ettiğimiz hata kodunu bir mesaj olarak ekrana yazdırmak da mümkündür. Bu durumda da 
+        "FormatMessage" isimli fonksiyona çağrı yapmalıyız. 
+            >>>> "FormatMessage" : Fonksiyonun prototipi aşağıdaki gibidir.
+                DWORD FormatMessage(
+                    DWORD   dwFlags,
+                    LPCVOID lpSource,
+                    DWORD   dwMessageId,
+                    DWORD   dwLanguageId,
+                    LPTSTR  lpBuffer,
+                    DWORD   nSize,
+                    va_list *Arguments
+                );
+
+        Fakat bu fonksiyonun kullanımı biraz zordur. Kursun geri kalanında hata mesajlarının ekrana yazılması için "ExitSys" isminde 
+        "wrapper" bir fonksiyon yazıp kullanacağız. 
+            >>>> "ExitSys" : Fonksiyonun tanımı aşağıdaki biçimde olacaktır.
+
+                void ExitSys(LPCSTR lpszMsg){
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr; 
+                    if(
+                        FormatMessage(
+                            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                            NULL,
+                            dwLastErr,
+                            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                            (LPTSTR)&lpszErr,
+                            0,
+                            NULL
+                        )
+                    )
+                    {
+                        fprintf(stderr, "%s : %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+            Fonksiyon bizden bir yazıyı argüman olarak alır. İlk önce bu yazıyı ekrana yazdırır. Devamında " : " karakterini, 
+            en sonunda ise "GetLastError()" ile elde ettiğimiz hata koduna ilişkin yazıyı ekrana yazdıracaktır. 
+                * Örnek 1,
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <string.h>
+                    #include <windows.h>
+
+                    void ExitSys(LPCSTR lpszMsg);
+
+                    int main(void)    
+                    {
+                        /* 
+                            # OUTPUT #
+                            CreateFile : Sistem belirtilen dosyayı bulamıyor. 
+                        */
+                    
+                        HANDLE hFile;
+                        if((hFile = CreateFile("test.xxx", GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE) 
+                            ExitSys("CreateFile");
+                        
+                        puts("Ok");
+                        
+                        return 0;
+                    }
+
+                    void ExitSys(LPCSTR lpszMsg){
+                        DWORD dwLastErr = GetLastError();
+                        LPTSTR lpszErr; 
+                        if(
+                            FormatMessage(
+                                FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                                NULL,
+                                dwLastErr,
+                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                (LPTSTR)&lpszErr,
+                                0,
+                                NULL
+                            )
+                        )
+                        {
+                            fprintf(stderr, "%s : %s", lpszMsg, lpszErr);
+                            LocalFree(lpszErr);
+                        }
+
+                        exit(EXIT_FAILURE);
+                    }
+
+        Özetlemek gerekirse; Bir API fonksiyonu başarısız olduğunda "GetLastError" fonksiyonu ile başarısızlığın nedenine 
+        ilişkin rakamsal değeri temin ediyoruz. Daha sonra "FormatMessage" fonksiyonuna bu değeri geçerek, başarısızlığın 
+        nedeninin metinsel olarak temin ediyoruz. Fakat "FormatMessage" kullanımı zor olduğu için, "ExitSys" isimli bir 
+        "wrapper" fonksiyon kullanılacaktır. Dolayısıyla başarısızlığın nedenini ekrana yazdırmak için "ExitSys" isimli 
+        fonksiyonu kullanacağız. Diğer yandan programcı "last-error" değerini belli bir değere çekebilir. Bunun için 
+        "SetLastError" fonksiyonunu çağırması gerekmektedir.
+            >>>> "SetLastError" : Fonksiyonun prototipi aşağıdaki gibidir.
+                
+                void SetLastError(DWORD dwErrCode);
+
+            Fonksiyon parametre olarak hata kodunun "#define" edilmiş halini almaktadır. 
+                * Örnek 1,
+
+                    void ExitSys(LPCSTR lpszMsg);
+                    BOOL Foo(LPCSTR lpszName);
+
+                    int main(void){
+                        if(!Foo(""))
+                            ExitSys("Foo");
+
+                        return 0;
+                    }
+
+                    BOOL Foo(LPCSTR lpszName){
+                        if(strlen(lpszName) == 0){
+                            SetLastError(ERROR_BAD_LENGTH);
+                            return FALSE;
+                        }
+
+                        return TRUE;
+                    }
+
+                    void ExitSys(LPCSTR lpszMsg){
+                        DWORD dwLastErr = GetLastError();
+                        LPTSTR lpszErr; 
+                        if(
+                            FormatMessage(
+                                FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                                NULL,
+                                dwLastErr,
+                                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                (LPTSTR)&lpszErr,
+                                0,
+                                NULL
+                            )
+                        )
+                        {
+                            fprintf(stderr, "%s : %s", lpszMsg, lpszErr);
+                            LocalFree(lpszErr);
+                        }
+
+                        exit(EXIT_FAILURE);
+                    }
+
+        Bunlara ek olarak Windows API fonksiyonları ekseriyetle "BOOL" türüyle geri dönmektedir. Böylesi fonksiyonlar 
+        için başarı durumunda "Non-zero", hata durumunda "0" ile geri döndüğünü söyleyebiliriz. Dolayısıyla böylesi 
+        fonksiyonların geri dönüş değerini aşağıdaki biçimlerde kontrol edebiliriz;
+
+            if(SomeAPIFunc() == FALSE){
+
+            }
+
+        veya 
+
+            if(!SomeAPIFunc()){
+
+            }            
+
+        Fakat aşağıdaki biçimde kontrol etmemeliyiz;
+
+            if(SomeAPIFunc() == TRUE){
+
+            }
+
+        veya 
+
+           if(SomeAPIFunc()){
+
+            }
+
+        Çünkü "FALSE" ve "TRUE" sembolik sabitleri, "windows.h" dosyası içerisinde, aşağıdaki biçimde "#define"
+        edilmiştir:
+
+            #define FALSE   0
+            #define TRUE    1
+
+        >>> POSIX Fonksiyonlarında: Bu fonksiyonların büyük çoğunluğu "int" türden değer döndürmektedir. Başarı durumunda "0",
+        hata durumunda "-1" değerine geri dönmektedir. Bazı POSIX fonksiyonları da bir adres değeri ile geri dönmektedir. Böylesi 
+        fonksiyonlar hata durumunda "NULL" değerine geri dönerler. UNIX dünyasında fonksiyonların başarısızlık nedeni için "errno" 
+        isimli global değişkene bakmamız gerekmektedir. Bu değişken ise "errno.h" isimli başlık dosyasında bildirilmiştir. Bazı 
+        sistemlerde "errno" ismi doğrudan bir değişken olarak, bazı sistemlerde ise bir makro olarak tanımlanmıştır. Fakat POSIX 
+        standartlarınca "errno" nun değer atanabilir bir şey olması gerekmektedir. Bu nedenden dolayıdır ki biz programcılar "errno" 
+        ismini kendi programlarımızda kullanmaktan kaçınmalıyız. Diğer yandan POSIX standartlarınca hiç bir fonksiyon "errno" ya 
+        "0" değerini atamayacağı GARANTİ ETMEKTEDİR. Yine Windows sistemlerinde olduğu gibi "errno" değişkeninin aldığı değerler 
+        "#define" edilmiştir ki burada sadece "E" öneki almaktadır ve hangi fonksiyonun "errno" değişkenine hangi değeri atayacağı 
+        önceden belirlenmiştir. Dolayısıyla fonksiyonun başarısızlık nedenini irdelerdek, "#define" edilmiş hallerini kullanmalıyız. 
+        Çünkü standart haline getirilen bu "E" öneki alanlardır. Aynı ön ek, farklı sistemlerde farklı rakamlara ait olabilir. Şimdi 
+        bizler hatanın sebebini ekrana yazdırırken nasıl bir yöntem izlemeliyiz? Her ne kadar hangi fonksiyonun "errno" değişkenine 
+        hangi değeri atayacağı belli olsa da, bu iş zahmetli olabilmektedir. İşte böylesi durumlarda bizler "strerror" fonksiyonunu 
+        kullanmalıyız.
+            >>>> "strerror" : Fonksiyonun prototipi aşağıdaki gibidir:
+
+                #include <string.h>
+                char *strerror(int errnum);
+
+            Parametre olarak "errno" değerini alır ve karşılık gelen yazının adresine geri döner. Bu adres "static" bir dizi adresidir
+            fakat "thread-safe" DEĞİLDİR. Bu fonksiyon aynı zamanda standart bir C fonksiyonudur fakat "errno" kavramı standart C içerisinde 
+            kullanımı sınırlıdır. 
+                * Örnek 1,
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <string.h>
+                    #include <errno.h>
+                    #include <fcntl.h>
+
+                    int main(void)    
+                    {
+                        /* 
+                            # OUTPUT #
+                            open failed: No such file or directory
+                        */
+                    
+                        int fd;
+                        if((fd = open("test.dat", O_RDONLY)) == -1){
+                            fprintf(stderr, "open failed: %s\n", strerror(errno));
+                            exit(EXIT_FAILURE);
+                        }
+                        
+                        puts("Ok");
+                        return 0;
+                    }
+
+        "strerror" fonksiyonuna alternatif olarak birde "perror" fonksiyonu vardır.
+            >>>> "perror" : Fonksiyonun prototipi aşağıdaki gibidir.
+
+                #include <stdio.h>
+                void perror(const char *s);
+
+            Unutmamalıyız ki bu fonksiyon "errno" değişkeninin en sonki değerini kullanır. Dolayısıyla fonksiyonumuz 
+            başarısız olduğunda bu fonksiyonu çağırmalıyız. Parametre olarak bir yazı alır. Bu yazı ile "errno"
+            değişkenine karşılık gelen yazıyı birleştirir. Bu birleştirme esnasında ise iki yazı arasına " : "
+            karakterlerini ekler. En son oluşturulan yazıyı da "stderr" dosyasına yazar. 
+                * Örnek 1,
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <string.h>
+                    #include <errno.h>
+                    #include <locale.h>
+                    #include <fcntl.h>
+
+                    int main(void)    
+                    {
+                        /* 
+                            # OUTPUT #
+                            open: No such file or directory
+                        */
+
+                        int fd;
+                        if((fd = open("test.dat", O_RDONLY)) == -1){
+                            perror("open");
+                            exit(EXIT_FAILURE);
+                        }
+                        
+                        puts("Ok");
+                        return 0;
+                    }
+
+        Tıpkı Windows sistemleri için oluşturduğumuz "wrapper" fonksiyon için UNIX sistemleri için de bir "wrapper" 
+        fonksiyon kullanacağız. Bu sefer fonksiyonumuzun ismi "exit_sys" biçiminde olacaktır. 
+            >>>> "exit_sys" : Fonksiyonun tanımı aşağıdaki gibidir.
+
+                void exit_sts(const char* msg){
+                    perror(msg);
+                    exit(EXIT_FAILURE);
+                }
+
+> Hatırlatıcı Notlar:
+    >> Konsol ekranına yazılan mesajları Türkçe yazdırmak için:
+        * Örnek 1,
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <string.h>
+            #include <errno.h>
+            #include <locale.h>
+            #include <fcntl.h>
+
+            int main(void)    
+            {
+                if(setlocale(LC_ALL, "tr_TR.utf-8") == NULL){
+                    fprintf(stderr, "cannot set locale!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                int fd;
+                if((fd = open("test.dat", O_RDONLY)) == -1){
+                    fprintf(stderr, "open failed: %s\n", strerror(errno));
+                    exit(EXIT_FAILURE);
+                }
+                
+                puts("Ok");
+                return 0;
+            }
+
+    >> POSIX fonksiyonları da tıpkı standart C fonksiyonları gibi birer kütüphane fonksiyonlarıdır. Çekirdeğin içerisinde değillerdir. 
+    Çekirdeğin içerisinde bulunanlar sistem fonksiyonlarıdır. 
+
+    >> Terminolojiye ilişkin bir noktayı belirtmek istiyoruz. C'nin standart dosya fonksiyonlarının kullandığı FILE yapısına ilişkin göstericiye İngilizce "stream"
+    denilmektedir. Biz buna Derneğimizde "dosya bilgi göstericisi" diyoruz.
+
+    >> C'de her fopen fonksiyonu ile dosya açıldığında o dosya için o açıma ilişkin ayrı bir tampon oluşturulmaktadır. Yani tampon toplamda bir tane değildir, dosya başına
+    da bir tane değildir. Her fopen çağrısı ayrı bir tampon oluşturmaktadır. Aslında tampon bilgileri fopen donksiyonunun geri döndürdüğü FILE türünden yapı nesnesinin
+    içerisinde saklanmaktadır. Biz aynı dosyayı birden fazla kez fopen fonksiyonu ile açabiliriz. Bu durumda bu açımlardan elde edilen FILE nesnelerinin ayrı tamponları ve
+    ayrı dosya göstericileri olacaktır. 
+
+    >> C'nin dosya fonksiyonlarının kullandığı tamponun büyüklüğü <stdio.h> içerisindeki BUFSIZ sembolik sabitiyle dış dünyaya ifade edilmiştir. gcc derleyicilerinde (yani glibc kütüphanesinde) BUFIZ değeri
+    8192, Microsoft derleyicilerinde 512 biçimindedir. Tabii biz BUFSIZ değerini değiştirmekle bu tamponun büyüklüğünü değiştirmiş olmayız. Çünkü kütüphane kodları çoktan derlenmiştir. BUFSIZ sembolik sabiti
+    bizim kullanılan tampon büyüklüğünü öğrenebilmemiz için <stdio.h> içerisinde bulundurulmuştur. 
+
+    >> 	getchar fonksiyonu stdin dosyasından tek bir karakter okur ve okudğu karakterin sıra numarasına geri döner. getchar dosyanın sonuna gelindiğinde ya da IO hatası oluştuğunda EOF değerine geri dönmektedir.
+    Fonksiyonun prototipi şöyledir:
+
+        int getchar(void);
+
+    getchar fonksyonu aşağıdakiyle eşdeğerdir:
+
+        fgetc(stdin)
+
+    Hatta bazı eski C derleyicilerinde getchar bir makro biçiminde aşağıdkai gibi yazılmıştır:
+
+        #define getchar()	fgetc(stdin)
+
+    >> 	Biz daha önce standart C fonksiyonlarının bir tampon (cache) kullandığını belirtmiştik. Aslında UNIX/Linux sistemlerinde tüm dosya işlemlerinin wninde sonında read ve write POSIX fonksiyonlarıyla
+    yapıldığını biliyorsunuz. Bu POSIX fonksiyonları da zaten ilgili sistemdeki sistem fonksiyonlarını çağırmaktadır. O halde örneğin C'deki stdout dosyasına yazma yapan fonksiyonlar eninde sonunda write
+    fonksiyonunu 1 numaralı betimelyici ile çağırarak bu işlemi yapacaklardır. Benzer biçimde stdin dosyasından okuma yapan C fonksiyonları da aslında read fonksiyonunu 0 numaralı betimelyici ile çağırarak
+    okumayı yapmaktadır. 

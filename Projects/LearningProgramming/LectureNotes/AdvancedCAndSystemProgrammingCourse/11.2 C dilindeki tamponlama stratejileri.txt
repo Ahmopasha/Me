@@ -1,0 +1,220 @@
+> C Dilindeki Dosya Fonkisyonlarında Kullanılan Tamponlama Stratejileri: C'nin <stdio.h> fonksiyonları kütüphanelerde genellikle dosyanın ardışıl tek bir kısmını tamponda tutmaktadır.
+Bu tampon read/write bir cache siştemi gibidir. Dolayısıyla bizim dosyaya yazdığımız şeyler de aslında önce tampona yazılmaktadır. Pekiyi tampona yazılan bilgiler ne zaman dosyaya
+aktarılacaktır? İşte tampondaki bilgilerin dosyaya yazılması tipik olarak şu durumlarda sağlanmaktadır:
+
+    -> Tampona dosyanın yeni bir kısmı çekilirken eğer tampon güncellenmişse tampondakiler önce dosyaya yazılırlar. Bu durum tamponlama stratejisi ile de ilgilidir.
+    -> Dosya fclose fonksiyonu ile kapatılırken eğer tampona bir yazma yapılmışsa tampondakiler dosyaya yazılırlar.
+    -> exit standart C fonksiyonu zaten tüm dosyaları kapatııktan sonra prosesi sonlandırmaktadır. Dolayısıyla en kötü olasılıkla program sonlanırken tampona yazılmış olan bilgiler
+    dosyaya aktarılmaktadır. 
+    -> fflsuh fonksiyonu her çağrıldığında tampondakiler açıkça dosya yazılmaktadır.
+
+Aşağıdaki programı çalıştırınız akış getchar fonksiyonunda beklerken Ctrl+C tuşlarına basarak programı sinyal yoluyla sonlandırınız. Bu durumda tampona yazılan bilgiler flush edilmeden
+program sonlandırılacak ve dosyada 0 byte görülecektir.
+    * Örnek 1, 
+        #include <stdio.h>
+        #include <stdlib.h>
+
+        int main(void)
+        {
+            FILE *f;
+
+            if ((f = fopen("test.txt", "w")) == NULL) {
+                fprintf(stderr, "Cannot open file!..\n");
+                exit(EXIT_FAILURE);
+            }
+
+            fputc('a', f);
+            fputc('b', f);
+        
+            getchar();
+
+            fclose(f);
+
+            return 0;
+        }
+
+C'nin dosya fonksiyonlarında tamponlu çalışmadan kaynaklanan bir nedenle okumadan yazmaya yazmadan okumaya geçişte ya fflush fonksiynu çağrılmalı ya da fseek fonksiyonu çağrılmalıdır.
+Örneğin aşağıdaki işlem hatalıdır ve tanımsız davranışa yol açmaktadır:
+
+    ch = fgetc(f);
+    fputc('x', f);
+
+Burada fgetc ile 1 byte okunduğunda dosya göstericisi 1 byte ilerletilmektedir. Böylece fputc fonksiyonu sonraki offset'e yazılmak istenmiştir. Ancak işlem hatalıdır. Çünkü okumadan
+yazmaya yazmadan okumaya geçiş doğrudan yapılmaz. Bu kod şöyle düzeltilebilir:
+
+    ch = fgetc(f);
+    fseek(f, 0, SEEK_CUR);
+    fputc('x', f);
+
+Burada aslında fseek fonksiyonu dosya göstericisini hareket ettirmemktedir. Ancak fseek okumadan yazmaya geçişte gerekli olan tampon hazırlığını da yapmaktadır. C'nin standart dosya
+fonksiyonları üç farklı tamponlama stratejisi (yani yöntemi) kullanabilmektedir. Buna dosyanın (stream'in) tamponlama modu da denilmektedir. Bu modlar şunlardır:
+
+    -> Tam Tamponlamalı Mod (Full Buffered Mode)
+    -> Satır Tamponlamalı Mod (Line Buffered Mode)
+    -> Sıfır Tamponlamalı Mod (No Buffered Mode)
+
+Bu tamponlama modlarından,
+    >> Tam tamponlamalı modda tampon (yani cache) tam kapasiteyle kullanmaya çalışılmaktadır. Dosyanın ardışıl bölümü tapona çekilir. Okunmak istenen bilgiler mümkün olduğunca tampondan
+    verilir. Tamponun dışna çıkılmışsa dosyanın yeni bir bölümü tampona aktarılır. Tabii bu sırada tampon kirlenmişse flush edilir. Bu en doğal çalışma modudur. 
+
+    >> Satır tamponlamalı modda tampona tek bir satır çekilir. Satırın sonında da '\n' karakteri vardır. Dosyadan okuma yapıldıkça buradan verilir. Satır bittiğinde yeni bir satır tampona
+    çekilir. Yani tamponda tipik olarak tek bir satır bulunmaktadır. Tabii yine tampon kirlenmişse yeni satır tampona çekilirken flush işlemi yapılmaktadır. Bu modda tampona yazılan '\n'
+    karakteri kesinlikle flush işlemine yol açmaktadır. Halbuki tam tamponlamada flush oluşturan özel bir byte yoktur. 
+
+    >> Sıfır tamponlamalı modda tampon hiç kullanılmaz. C'nin standart dosya fonksiyonları tamponlamayı kullanmadan doğrudan işletim sisteminin sistem fonksiyonlarıyla (UNIX/Linux 
+    sistemlerinde POSIX fonksiyonlarıyla, Windows sistemlerinde Windows API fonksiyonlarıyla) transferi gerçekleştirirler. 
+
+Biz yukarıda tamponlama modlarının tipik davranışlarını belirttik. Aslında C standartları bu konudaki belirlemeleri biraz muğlak ve kesin olmayan biçimde yani bir "niyet biçiminde"
+belirtmiştir. Detayları derleyiciyi yazanlara bırakmıştır. Bu durumda örneğin staır tabanlı tamponlama seçilse bile işlemler tam tamponlamalı gibi yapılabilir. Standart C kütüphaneleri mümkün
+olduğunca tamponlama davranışını yukarıda açıkladıpımız gibi gerçekleştirmektedir. Ancak örneğin normal disk dosyasının '\n' görene kadar satırsal bir biçimde okunması uygun olmayabilmektdir. 
+Bu nedenle örneğin Microsoft derleyicileri, gcc ve clang derleyicileri (glibc kütüpahnesi) normal disk dosyaları için satır tamponalamlı modda '\n' karakteri tampona yazıldığında flush işlemi
+yapmakta ancak okuma sırasında tamponu tamamen doldurmaktadırlar. Pekiyi bir dosyayı fopen fonksiyonu ile açtığımızda dosyanın default tamponlama modu nedir? İşte C standartları bu konuda bir
+şey söylememektedir. Fakat en normal durum disk dosyaları için default tamponalama modunun tam tamponlama olmasıdır. Yaygın derleyiciler default tamponlama modunu tam tamponlamalı mod olarak
+belirlemektedir. Ancak standratlarda stdin, stdout ve stderr dosyalarının default tamponlama modu için bazı şeyler söylenmiştir. Bunu izleyen graflarda ele alacağız. Dosyanın tamponlama modu ve 
+tamponun yeri setbuf ve setvbuf standart C fonksiyonlarıyla değiştirilebilmektedir. Bu fonksiyonlardan,
+    >> "setbuf": setbuf fonksiyonu temel olarak dosya için ayrılan tamponun yerini değiştirmek için kullanılmaktadır. Bu fonksiyon tamponun boyutunu değiştirmez, Tampon her zaman BUFSIZ
+    uzunluğundadır. Fonksiyon yalnızca tamponun yerini değiştirmektedir. Fonksiyonun prototipi şöyledir:
+
+	    void setbuf(FILE *stream, char *buf);
+	
+	Fonksiyonun birinci parametresi tamponu değiştirilecek dosyaya ilişkin dosya bilgi göstericisini belirtmektedir. İkinci parametre yeni tamponun yerini belirtmektedir. Bu parametreye en azından
+    BUFSIZ uzunluğunda tahsis edilmiş bir alanın adresi geçirilmelidir. Fonksiyonun ikinci parametresine NULL adres geçirilirse dosya sıfır tamponlamalı moda sokulmaktadır. Aşağıda tam tamponlamanın
+    nasıl etki gösterdiğine yönelik basit bir örnek verilmiştir. Örnekte önce tamponun yeri setbuf fonksiyonuyla değiştirilmiş sonra dosyadan okuma yapılıp tampon görüntülenmiştir. Sonra da dosyaya
+    yazma yapılmış yeniden tampon görüntülenmiştir. Okumadan yazmaya geçerken bir fseek çağırmasının yapıldığında dikkat ediniz. Genellikle fseek çağrıları tamamen tamponu yeniden doldurmaktadır. 
+        * Örnek 1,
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <ctype.h>
+
+            void disp_hex(const void *buf, size_t size, size_t lbytes)
+            {
+                size_t i, k, remainder;
+                unsigned char *cbuf = (unsigned char *)buf;
+
+                for (i = 0; i < size; ++i) {
+                    if (i % lbytes == 0)
+                        printf("%08x ", (unsigned int)i);
+
+                    printf("%02X ", cbuf[i]);
+
+                    if (i % lbytes == lbytes - 1) {
+                        for (k = 0; k < lbytes; ++k)
+                            printf("%c", iscntrl(cbuf[i - lbytes + k]) ? '.' : cbuf[i - lbytes + k]);
+                        putchar('\n');
+                    }
+                }
+
+                remainder = size % lbytes;
+                for (k = 0; k < 3 * (lbytes - remainder); ++k)
+                    putchar(' ');
+
+                for (k = 0; k < remainder; ++k)
+                    printf("%c", iscntrl(cbuf[i - remainder + k]) ? '.' : cbuf[i - remainder + k]);
+                putchar('\n');
+            }
+
+            int main(void)
+            {
+                FILE *f;
+                char buf[BUFSIZ];
+
+                if ((f = fopen("test.txt", "r+")) == NULL) {
+                    fprintf(stderr, "cannot open file!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                setbuf(f, buf);
+
+                fgetc(f);
+
+                disp_hex(buf, BUFSIZ, 16);
+
+                printf("---------------------------------------------\n\n");
+
+                fseek(f, 0, SEEK_CUR);
+
+                fputc('x', f);
+                disp_hex(buf, BUFSIZ, 16);
+
+                fclose(f);
+
+                return 0;
+            }
+
+
+    >> "setvbuf" : sevbuf fonksiyonu setbuf fonksiyonunu işlevsel olarak kapsamaktadır. Zaten bu fonksiyon setbuf fonksiyonunun yetersizlikleri nedeniyle tasarlanmıştır. setvbuf fonksiyonu ile biz
+    dosyanın tamponlama modunu hem de tamponun yerini ve büyüklüğünü değiştirebiliriz. Fonksiyonun prototipi şöyledir:
+
+	    int setvbuf(FILE *stream, char *buf, int mode, size_t size);
+
+	Fonksiyonun birinci parametresi ilgili dosyaya ilişkin dosya bilgi göstericisini, ikinci parametresi yeni tamponun yerini, üçüncü parametresi yeni tamponlama modunu ve dördüncü parametresi de
+    tamponun yeni uzunluğunu belirtmektedir. Tamponlama modu için şu değerlerden biri girilmelidir:
+
+        -> _IOFBF	(Tam tamponlama)
+        -> _IOLBF	(Sator tamponlaması)
+        -> _IONBF	(Sıfır tamponlama)
+
+	Tamponlama modunu belirten üçünü parametreye _IONBF değeri girilirse artık ikinci dördüncü parametreler fonksiyon tarafından kullanılmamaktadır. Fonksiyonun ikinci parametresine NULL adres
+    geçilebilir. Bu durumda tampon fonksiyon tarafından dördüncü parametre belirtilen uzunlukta tahsis edilmektedir. Fonksiyon başarı durumunda 0 değerine, başarısızlık durumunda sıfır dışı herhangi
+    bir değere geri dönmektedir. Aşağıdaki örnekte biz açılmış olan dosyanın hem tampon büyüklüğü hem de tamponun yeri değiştirilmiştir.
+        * Örnek 1,
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <ctype.h>
+
+            void disp_hex(const void *buf, size_t size, size_t lbytes)
+            {
+                size_t i, k, remainder;
+                unsigned char *cbuf = (unsigned char *)buf;
+
+                for (i = 0; i < size; ++i) {
+                    if (i % lbytes == 0)
+                        printf("%08x ", (unsigned int)i);
+
+                    printf("%02X ", cbuf[i]);
+
+                    if (i % lbytes == lbytes - 1) {
+                        for (k = 0; k < lbytes; ++k)
+                            printf("%c", iscntrl(cbuf[i - lbytes + k]) ? '.' : cbuf[i - lbytes + k]);
+                        putchar('\n');
+                    }
+                }
+
+                remainder = size % lbytes;
+                for (k = 0; k < 3 * (lbytes - remainder); ++k)
+                    putchar(' ');
+
+                for (k = 0; k < remainder; ++k)
+                    printf("%c", iscntrl(cbuf[i - remainder + k]) ? '.' : cbuf[i - remainder + k]);
+                putchar('\n');
+            }
+
+            int main(void)
+            {
+                FILE *f;
+                char buf[BUFSIZ * 2];
+
+                if ((f = fopen("test.txt", "r+")) == NULL) {
+                    fprintf(stderr, "cannot open file!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                setvbuf(f, buf, _IOFBF, BUFSIZ * 2);
+
+                fgetc(f);
+
+                disp_hex(buf, BUFSIZ * 2, 16);
+
+                printf("---------------------------------------------\n\n");
+
+                fseek(f, 0, SEEK_CUR);
+
+                fputc('x', f);
+                disp_hex(buf, BUFSIZ * 2, 16);
+
+                fclose(f);
+
+                return 0;
+            }
+
+setbuf ve setvbuf fonksiyonları dosya açıldıktan sonra ancak dosya üzerinde henüz hiçbir işlem yapılmadan kullanılmalıdır. Aksi tadirde "tanımsız davranış (undefined behavior)" oluşmaktadır. 

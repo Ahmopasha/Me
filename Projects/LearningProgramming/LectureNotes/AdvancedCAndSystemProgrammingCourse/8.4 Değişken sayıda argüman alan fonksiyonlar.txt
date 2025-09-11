@@ -1,0 +1,447 @@
+> C'de Değişken Sayıda Argüman Alan Fonksiyonlar: C'de bir fonksiyonun istenildiği kadar çok argümanla çağrılmasını sağlamak için fonksiyon prototoipinde ve/veya tanımlamasında ... (ellipsis) atmonun
+bulundurulması gerekir. Örneğin:
+
+    void foo(int a, ...);
+
+Burada foo fonksiyonu en azından bir argümanla çağrılmak zorundadır. Ancak istenildiği kadar çok argümanla çağrılabilir. Örneğin:
+
+    foo(10);					/* geçerli */
+    foo(10, 20);				/* geçerli */
+    foo(10, 20, 30);			/* geçerli */
+    foo(10, 20, 30, 40);		/* geçerli */
+    foo(10, 20, 30, 40, 50);	/* geçerli */
+
+Fonksiyonun ... parametresi parametre listesinin sonunda bulunmak zorundadır. Örneğin aşağıdkai fonksiyon bildirimi geçersizdir:
+
+    void bar(int a, ..., int b);		/* geçersiz! ... parametresi parametre listesinin sonunda bulunmak zorunda */
+
+Fonksiyonun ... parametresinden önce en az bir parametresi olmak zorundadır. Örneğin:
+
+    void tar(...);		/* geçersiz! ... parametresinden önce en az bir parametrenin olması gerekirdi */
+
+Değişken sayıda argüman alan fonksiyonlar denildiğinde akla printf, fprintf, scanfi fscanf, sprintf, snprintf gibi fonksiyonlar gelmektedir. Örneğin printf fonksiyonunun prototipi şöyledir:
+
+    int printf(const char *format, ...);
+
+Görüldüğü gibi printf en azından char türden bir adresle çağrılmak zorundadır. Ancak bu argümandna sonra sıfır tane ya da n tane argüman girilebilir. printf fonksiyonu stdout dosyasına yazılan karakter sayısı ile
+geri dönmektedir. Tabii aslında printf de başarısız olabilir. Bu durumda negatif herhangi bir değere geri döner. Pekiyi değişken sayıda parametre alabilen fonksiyonlar nasıl yazılmaktadır? Bu fonksiyonların
+yazımındaki temel sorun ... parametresine karşılık gelen argümanların elde edilmesidir. Örneğin:
+
+    void foo(int a, ...)
+    {
+        /* ... */
+    }
+
+foo fonksiyonunu şöyle çağırmış olalım:
+
+    foo(10, 20, "ankara", 40.5, 50);
+
+Biz fonksiyon içerisinde a parametre değişkeni yoluyla yalnızca 10 değerini elde edebiliriz. Pekiyi ya diğer değerler? İşte ... parametresine karşılık gelen argümanların elde edilmesi için <stdarg.h> dosyası
+içerisinde bulunan aşağıdaki makrolar kullanılmaktadır:
+
+    void va_start(va_list ap, argN);
+    type va_arg(va_list ap, type);
+    void va_end(va_list ap);
+
+Bu makrolar va_list isimli bir tür ile çalışmaktadır. Programcı önce va_start makrosunu çağırmalıdır. va_start makrosunun birinci parametresi va_list türünden bir nesne, ikinci parametresiise ... parametresinden
+bir önceki parametreyi almaktadır. Örneğin:
+
+    void foo(int a, ...)
+    {
+        va_list va;
+
+        va_start(va, a);
+
+        /* ... */
+    }
+
+Programcı argümanlarla işini bitirdikten sonra va_list türünden nesne ile son kez va_end makrosunu çağırmalıdır. 
+
+    void foo(int a, ...)
+    {
+        va_list va;
+
+        va_start(va, a);
+
+        /* ... */
+
+        va_end(va);
+    }
+
+... parametresine karşı gelen argümanların elde edilmesi için argümanların türlerinin biliniyor olması gerekmektyedir. Argümanları elde eden asıl makro va_arg isimli makrodur. Bu makronun birinci parametresi
+va_list nesnesini, ikinci parametresi argümanın türünü almaktadır. Bu makro her çağrıldığında bize sırasıyla argümanların değerleri verecektir. Programcı ... parametresi için geçilen argümanaların sayısını 
+da bilmemektedir. Bu sayıyı programcı bir biçimde ... parametresinden önceki parametreler için geçilen argümanlardan elde edebilir. va_arg makrosunun kullanımı şöyledir:
+
+    arg1 = va_arg(va, int);
+    arg2 = va_arg(va, const char *);
+    ...
+
+Programcının va_arg makrosuyla eksik argüman argüman çekmesinde bir sorun yoktur. Ancak fazla sayıda argüman çekildiğinde "tanımsız davranış (undefined behavior)" oluşmakatadır. Bu tür durumlarda bir çökmeyle
+karşılaşılmayabilir. Ancak çöp değerler elde edilir. 
+    * Örnek 1, Aşağıdaki örnekte add isimli fonksiyonun birinci parametresi ... parametresi için girilen argümanların sayısını belirtmektedir. Örnekte tüm argümanların int türden olduğu varsayılmaktadır.
+    Fonksiyonun prototipi şöyledir:
+
+	    int add(int count, ...);
+
+	Fonksiyon argümanların  toplamına geri dönmektedir.
+        #include <stdio.h>
+        #include <stdarg.h>
+
+        int add(int count, ...)
+        {
+            va_list va;
+            int total, val;
+
+            va_start(va, count);
+
+            total = 0;
+            for (int i = 0; i < count; ++i) {
+                val = va_arg(va, int);
+                total += val;
+            }
+
+            va_end(va);
+
+            return total;
+        }
+
+        int main(void)
+        {
+            int total;
+
+            total = add(5, 10, 20, 30, 40, 50);
+            printf("%d\n", total);
+
+            return 0;
+        }
+
+    * Örnek 2, Aşağıda birden fazla yazıyı alt alta yazdıran vputs isimli bir fonksiyon örneği verilmiştir. Fonksiyonun prototip şöyledir:
+
+	    void vputs(const char *str, ...);
+
+	Fonksiyonu çağıracak kişinin argüman listesinin sonuna NULL adres yerleştirmesi gerekmektedir. Çünkü fonksiyon NULL adres görene kadar va_arg makrosuyla argüman çekmektedir. Örneğin:
+	
+	    vputs("ali", "veli", "selami", "ayse", "fatma", (char *)0);
+	
+	execl ve execlp fonksiyonlarının da bu biçimde olduğunu anımsayınız. Burada NULL adres girilirken tür dönüştürmesi yapılmalıdır. Bu tür dönüştürmesinin neden gerektiğini exec fonksiyonlarının l'li
+    versiyonlarında açıklamıştık. Burada bir kez daha açıklamak istiyoruz. C'de argümana karşılık gelen parametre ... ise bu durumda derleyici "default argüman dönüştürmesi (default argument conversion)" denilen
+    bir dönüştürme yapmaktadır. Default argüman dönüştürmesinde int türünden küçük olan türler int türüne (integer promotion), float türü double türüne ve 0 sabiti de int türden 0 olarak fonksiyona
+    gönderilmektyedir. Yani biz argümanda düz 0 kullanırsak bu artık NULL adres anlamına gelmez. Tabii sistemlerin hemen hepsinde NULL adres zaten tüm bitleri 0 olan adrestir. Ancak int türü ile adres türlerinin
+    farklı uzunluklarda olduğu 64 bit sistemlerde bu durumun soruna yol açma olasılığı yüksek olmaktadır.
+        #include <stdio.h>
+        #include <stdarg.h>
+
+        void vputs(const char *str, ...)
+        {
+            va_list va;
+            const char *arg;
+
+            va_start(va, str);
+
+            arg = str;
+            for (;;) {
+                if (arg == NULL)
+                    break;
+                puts(arg);
+                arg = va_arg(va, const char *);
+            }
+
+            va_end(va);
+        }
+
+        int main(void)
+        {
+            vputs("ali", "veli", "selami", (char *)NULL);
+
+            return 0;
+        }
+
+    * Örnek 3, Aşağıda printf fonksiyonun nasıl yazılmış olabileceğine ilişkin bir ipucu vermek verilmiştir. Buradaki myprintf fonksiyonunda '%' karakteri olmadığı sürece ilerlenmiş ve o karakterler stdout
+    dosyasına yazdırılmıştır. '%' karakteri görüldüğünde onun yanındaki karaktere bakılıp hangi türden argüman çekileceğine karar verilmiştir. Tabii orijinal printf fonksiyonu stdout dosyasının tamponuna
+    yazmaktadır. Biz bu örneğimizde putchar fonksiyonu ile yazdırma kısmını yaptık. Bu tür durumlarda elde genellikle bir karakterin ekrana yazdırılması için temel bir fonksiyon zaten bulunmaktadır. Tabii putchar
+    fonksiyonu zaten standart C fonksiyonu olduğu için örneğimizde tampona yazmaktadır. Zaten genel olarak standart C'deki <stdio> kütüphaneleri yazılırken önce tamponlu çalışacak tek bir karakteri yazan fonksiyon
+    oluşturulur (bizim örneğimizde bu putchar) sonra o fonksiyon kullanılarak diğer fonksiyonlar yazılır. 
+        #include <stdio.h>
+        #include <math.h>
+        #include <stdarg.h>
+
+        void disp_int(int val)
+        {
+            if (val < 0) {
+                putchar('-');
+                val = -val;
+            }
+                
+            if (val / 10)
+                disp_int(val / 10);
+
+            putchar(val % 10 + '0');
+        }
+
+        int myprintf(const char *format, ...)
+        {
+            va_list va;
+            int total;
+            int val_int;
+            const char *val_str;
+
+            va_start(va, format);
+
+            total = 0;
+            while (*format != '\0') {
+                if (*format == '%') {
+                    switch (*++format) {
+                        case 'd':
+                            val_int = va_arg(va, int);
+                            disp_int(val_int);
+                            if (val_int < 0) {
+                                val_int = -val_int;
+                                ++total;
+                            }
+                            total += log10(val_int) + 1;
+                            break;
+                        case 'c':
+                            putchar(va_arg(va, int));
+                            ++total;
+                            break;
+                        case 's':
+                            val_str = va_arg(va, const char *);
+                            while (*val_str != '\0') {
+                                putchar(*val_str++);
+                                ++total;
+                            }
+                            break;
+                            
+                        /* ... */
+                    }
+                }
+                else {
+                    putchar(*format);
+                    ++total;
+                }
+                ++format;
+            }
+
+            va_end(va);
+
+            return total;
+        }
+
+        int main(void)
+        {
+            int a = -10;
+            char c = 'x';
+            char s[] = "ankara";
+            int result;
+
+            result = myprintf("a = %d, ch = %c, s = %s\n", a, c, s);
+            myprintf("%d\n", result);
+
+            return 0;
+        } 
+
+C'nin "stdio" kütüphanesinde  printf ailesi fonksiyonların va_list parametreli başı "v" ile başlayan versiyonları vardır. Bu sayede biz bu printf ailesi fonksiyonları sarmalayabilen fonksiyonlar yazabiliriz.
+Örneğin printf fonksiyonun v'li versiyonun ismi vprintf, fprintf fonksiyonunun v'li versiyonun ismi vfprintf fonksiyonudur. Bu fonksiyonların listesi şöyledir:
+
+    printf		===>	vprintf
+    scanf		===>	vscanf
+    fprintf		===>	vfprintf
+    fscanf		===>	vfscanf
+    sprintf		===>	vsprintf
+    snprintf	===>	vsnprintf
+    sscanf		===>	vsscanf
+
+Bu fonksiyonların v'li versiyonları v'siz versiyonlarından bir parametre daha fazla parametreye sahiptir. Bu fazla parametre son parametredir ve va_list türündendir. Örneğin vprintf fonksiyonunun parametrik yapısı
+ile printf fonksiyonunun parametrik yapısını karşılaştırınız:
+
+    int printf(const char *format, ...);
+    int vprintf(const char *format, va_list ap);
+
+printf fonksiyonunu sarmalayan bir fonksiyon vprintf kullanılarak şöyle yazılabilir:
+
+    int wrapper_printf(const char *format, ...)
+    {
+        va_list va;
+        int result;
+
+        va_start(va, format);
+
+        result = vprintf(format, va);
+
+        va_end(va);
+
+        return result;
+    }
+
+Aslında burada yapılan şey "..." parametresi ile alınan bütün argümanları doğrudan vprintf fonksiyonuna geçirmektir. Aşağıda buna bir örnek verilmiştir. 
+    * Örnek 1,
+        #include <stdio.h>
+        #include <math.h>
+        #include <stdarg.h>
+
+        int wrapper_printf(const char *format, ...)
+        {
+            va_list va;
+            int result;
+
+            va_start(va, format);
+
+            result = vprintf(format, va);
+
+            va_end(va);
+
+            return result;
+        }
+
+        int main(void)
+        {
+            int a = 10;
+            double b = 3.14;
+
+            wrapper_printf("%d, %f\n", a, b);
+
+            return 0;
+        }
+
+printf ailesi fonksiyonların sarmalanmak istenmesinin en önemli nedeni araya girip bir şeyler yapmaktır. Örneğin biz UNIX/Linux sistemlerinde bir hata olduğunda errno değişkenine karşı gelen yazıyı stderr
+dosyasına yazdırarak programı sonlandıran aşağıdaki gibi bir fonksiyon kullanıyorduk:
+
+    void exit_sys(const char *msg)
+    {
+        perror(msg);
+
+        exit(EXIT_FAILURE);
+    }
+
+Burada perror fonksiyonu önce yazıyı sonra ':' karakterini ve sonra da bir boşluk bırakıp errno değerine karşı gelen yazıyı stderr dosyasına yazdırmaktadır. Nihayetinde program exit fonksiyonuyla
+sonlandırılmıştır. Biz burada bu fonksiyondan daha yetenekli olan printf gibi kullanılan bir fonksiyonu vprintf fonksiyonunu sarmalayacak biçimde de yazabiliriz. Örneğin:
+
+    void exit_vsys(const char *format, ...)
+    {
+        va_list va;
+
+        va_start(va, format);
+
+        vfprintf(stderr, format, va);
+        fprintf(stderr, ": %s\n", strerror(errno));
+
+        va_end(va);
+
+        exit(EXIT_FAILURE);
+    }
+
+Burada önce vfprintf fonksiyonu ile printf gibi bilgiler stderr dosyasına yazdırılmış sonra ':' karamteri ve boşluk karakterinden sonra errno değerinin yazısı yazdırılmıştır. Fonksiyon bu haliyle daha yenekli hale
+gelmiştir. Örneğin artık biz fonksiyonu şöyle kullanabiliriz:
+
+    if ((fd = open(argv[1], O_RDONLY)) == -1)
+        exit_vsys("%s cannot open", argv[1]);
+
+Hata durumunda stderr dosyasına aşağıdaki gibi bir yazı basılacaktır:
+
+    xxx cannot open: No such file or directory
+
+Aşağıda bu konuya ilişkin bir örnek verilmiştir:
+    * Örnek 1,
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+        #include <errno.h>
+        #include <fcntl.h>
+        #include <unistd.h>
+        #include <stdarg.h>
+
+        void exit_vsys(const char *format, ...);
+
+        int main(int argc, char *argv[])
+        {
+            int fd;
+
+            if (argc != 2) {
+                fprintf(stderr, "wrong number of arguments!..\n");
+                exit(EXIT_FAILURE);
+            }
+
+            if ((fd = open(argv[1], O_RDONLY)) == -1)
+                exit_vsys("%s cannot open", argv[1]);
+
+            close(fd)	;
+            
+            return 0;
+        }
+
+        void exit_vsys(const char *format, ...)
+        {
+            va_list va;
+
+            va_start(va, format);
+
+            vfprintf(stderr, format, va);
+            fprintf(stderr, ": %s\n", strerror(errno));
+
+            va_end(va);
+
+            exit(EXIT_FAILURE);
+        }
+
+    * Örnek 2, Aşağıdaki örnekte exit_vsys fonksiyonunun tanımlaması "libsys.c" isimli dosyaya, prototipi de "libsys.h" isimli dosyaya yerleştirilmiştir. Bu dosya bir kez derlenip aşağıdaki gibi link aşamasına
+    dahil edilebilir:
+
+        gcc -c libsys.c
+        gcc -Wall -o sample sample.c libsys.o
+
+    Aşağıda buna ilişkin program kodları verilmiştir:
+        /* sample.c */
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <fcntl.h>
+            #include <unistd.h>
+            #include "libsys.h"
+
+            int main(int argc, char *argv[])
+            {
+                int fd;
+
+                if (argc != 2) {
+                    fprintf(stderr, "wrong number of arguments!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                if ((fd = open(argv[1], O_RDONLY)) == -1)
+                    exit_vsys("%s cannot open", argv[1]);
+
+                close(fd);
+                
+                return 0;
+            }
+
+        /* libsys.c */
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <string.h>
+            #include <errno.h>
+            #include <stdarg.h>
+
+            void exit_vsys(const char *format, ...)
+            {
+                va_list va;
+
+                va_start(va, format);
+
+                vfprintf(stderr, format, va);
+                fprintf(stderr, ": %s\n", strerror(errno));
+
+                va_end(va);
+
+                exit(EXIT_FAILURE);
+            }
+
+            /* libsys.h */
+
+            #ifndef LIBSYS_H_
+            #define LIBSYS_H_
+
+            /* Function Prototypes */
+
+            void exit_vsys(const char *format, ...);
+
+            #endif

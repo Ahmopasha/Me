@@ -1,0 +1,1327 @@
+> stdin, stdout, stderr Dosyaları: Bilgisayar sistemlerinde tüm işlemler aslında elektriksel düzeyde gerçekleştirilmektedir. Örneğin bilgiyarımızın genişleme yuvasına bir kart taktıldığını düşünelim.
+Bu kartın üzerinde birtakım entegre devreler potansiyel olarak birtakım işleri yapabilecek biçimde yerleştirilmiştir. Ancak bu tür donanım birimlerinin de hedef doğruktusunda programlanması
+gerekmektedir. Bu donanım birimlerine iş yaptırmak için komutlar elektriksel işaretler biçiminde gönderilmektedir. Ancak bu gönderim de makine komutlarıyla sağlanmaktadır. Yani genişleme yuvasına
+takılan kart aslında elektrisksel olarak programlanmakta ancak o elektiriksel işaretlerin karta gönderilmesi için de programlar yazılmaktadır. Bu tür donanım birimlerinin programlanması genellikle
+sembolik makine dili düzeyinde yapılmaktadır. Ancak programlama sırasında gerekli pek çok makine komutu özel komutlardır ve işlemcinin koruma mekanizamasına takılma potansiyelindedir. Bu nedenle bu
+tür kodların kernel modda çalştırılması gerekmektedir. İşte bir donanım birimini programlayan ve kernel modda çalışan kodlara "aygıt sürücüler (device drivers)" denilmektedir. O halde nerede bir
+donanım aygıtı varsa onu programlayan aşağı seviyeli kodların bulunuyor olması gerekir. Bu kodlar da aygıt sürücü biçimde yazılımalıdır. Örneğin bir ses kartını genişleme yuvasına taktiğimızda onun
+aygıt sürücüsü yüklenmedikten sonra kart bir işe yaramaktadır. Dolaysıyla aygıt sürücüler işletim sisteminin kernel yapısına uygun bir mimari ile yazılmak zorundadır. Her işletim sisteminin belli bir
+aygıt sürücü mimarisi vardır. Aygıt sürücü yazımı işletim işletim sistemine hatta aynı işletim sisteminin versiyonlarına göre değişebilmektedir. Nasıl masaüstü bilgisayarların genişleme yuvalarına
+kart takmak için o kartın belli özelliklere sahip olması gerekiyorsa bir aygıt sürücünün de işletim sisteminin belirlediği bazı özelliklere sahip olması gerekmektedir. Pekiyi aygıt sürücüler ne zaman
+ve nasıl yüklenmektedir? Aygıt sürücülerin bir bölümü kernel içerisine entegre edilmiş durumdadır. Bir bölümü sistem boot edilirken yüklenmektedir. Diğer bir bölümü ise gerektiğinde donanın aygıtı
+sisteme bağlandığında otomatik yüklenmektedir. Örneğin modern sistemlerde genişleme yuvalarına bir kart takıldığında ya da USB soketine bir donanım birimi takıldığında bu kartlar ve donanım birimleri
+kendini sisteme tanıtmaktadır. İşletim sistemelri de kendi aygıt sürücü istesinde bu kartlara ya da donanım birimlerine ilişkin aygıt sürücüler	varsa onları otomatik olarak yüklemektedir. Eskiden bu
+tür işlemler tamamen manuel yapılıyordu. Her durumda modern sistemlerde bir aygıt sürücünün yüklenebilmesi ancak sistem yöneticisinin onayıyla yapılabilmektedir. Örneğin UNIX/Linux sistemlerinde aygıt
+sürücüleri ancak root kullancısı sisteme yükleyebilir. Windows sistemlerinde default kullanıcı genellike admin durumundadır. Aygıt sürücüler yüklenirken bir pop pencereyle sistem yöneticisi
+bilgilendirilir ve onun onayı alınır. Bazı aygıt sürücleri bir donanım arayüzü biimindedir. Yani sistem programcısından komutlar alıp onu donanıma iletmektedir. Örneğin biz programcı olarak ses kartına
+ilişkin aygıt sürücüye komut gönderebiliriz. Bu aygıt sürücü de ses kartını programlayarak işlemleri gerçekleştirebilir. Aslında aygıt sürücüler genel olarak birer dosya gibi kullanılmaktadır. Yani aygıt
+sürücünün bir ismi vardır. Bir dosya nasıl açılıyorsa aygıt sürücü öyle açılır. Aygıt sürücü dosya gibi açıldıktan sonra ona yazma yapıldığında yazılanlar aygıt sürücüyel gönderilir. Aygıt sürücüden yine 
+dosya fonksiyonlarıyla okuma yapılır. Ayrıca aygıt sürücülerin içerisindeki önceden belirlenmiş fonksiyonlar user modtan çağrılabilmektedir.
+    * Örnek 1, UNIX/Linux sistemlerinde bir aygıt sürücü open fonksiyonuyla açılır. Ona write fonksiyonuyla bilgi gönderilir. Ondan read fonksiyonuyla okuma yapılır. ioctl isimli bir fonksiyonla da aygıt
+    sürücüdeki belli fonksiyonlar çalıştırılır. En sonunda aygıt sürücü close fonksiyonuyla kapatılır. 
+
+    * Örnek 2, Windows sistemlerinde yine aygıt ssürücü CreateFile API fonksiyonuyla bir dosya biçiminde açılır. WriteFile API fonksiyonuyla aygıt sürücüye bilgi gönderilir. ReadFile API fonksiyonuyla aygıt
+    sürücüden okuma yapılır. DeviceIOControl API fonksiyonuyla aygıt sürücü içerisindeki fonksiyonlar çağrılır. 
+
+Pekiyi aygıt sürücüler kabaca nasıl yazılmaktadır? İşte aygıt sürücüleri yazanlar aygıt sürücü açıldığında belli bir fonksiyonun çağrılmasını, aygıt sürücüye yazma yapıldığında belli bir fonksiyonun
+çağrılmasını, aygıt sürücüden okuma yapıldığında belli bir fonksiyonun çağrılamsını, aygıt sürücü kapatıldığında belli bir fonksiyonun çağrılmasını sağlamaktadır. Ayrıca aygıt sürücü içerisindeki bazı
+fonksiyonlara numaralar verip user moddan bu fonksiyonların çağrılması sağlarlar. 
+    * Örnek 1, Bir termometre devresini kontrol eden bir aygıt sürücü yazacak olalım. Aygıt sürücümüzün bir ismi vardır. Aygıt sürücü bir dosya gibi açıldığında aygıt sürücümüzün bir fonskyionu çağrılır.
+    Biz orada gerekiyorsa birtakım ilk işlemleri yaparız. Aygıt sürücümüzden okuma yapıldığında yine bizim bir fonksiyonumuz çağrılır. Örneğin bu fonksiyonda biz termometre devresinden ısıyı alarak okuma
+    yapan programa veririz. Aygıt sürücü kapatılınca yine bizim bir fonksiyonumuz çağrılır biz de gereken bazı son işlemleri yaparız. 
+
+Aygıt sürücüsü içerisindeki fonksiyonlar user moddan çağrılırken yine sistem fonksiyonlarında olduğu gibi proses kernel moddan user moda otomatik olarak geçirilmektedir. Yani aygıt sürücü içerisindeki
+fonksiyonlar kernel modda çalıştırılmaktadır. Fonksiyonun çalışması bittiğinde yeniden user moddan kernel moda geri dönülmektedir. İşte bilgisayarlarda kullanılan klavye ve ekran aslında donanımsal
+birimlerdir. Dolayısıyla bunlar aygıt sürücüler tarafından yönetilirler. Yani aslında biz ekrana bir şeyler yazdırabilmek için yazılacak şeyleri aygıt sürücüye göndeririz. Aygıt sürücü onları ekrana
+çıkartır. Benzer biçimde biz aslında klavyeden okuma yaparken aygıt sürücüden okuma yaparız. Aygıt sürücü de kalvyeden alınanları bize verir. Ekran ve klavye birimelrine "terminal" bunlara aygıt
+sürücülere de "terminal aygıt sürücüleri" denilmektedir. C standartlarında ekran ve klavye sözcükleri kullanılmamıştır. Çünkü bir bilgisayar sisteminde ekran ve klavyenin bulunması zorunlu değildir. 
+Ekran ve klavye yerine C standartlarında "stdout (standart output)" ve "stdin (standart input)" terimleri kullanılmıştır. C standartlarında stdout ve stdin birer dosya olarak geçmektedir. Böylece örneğin
+printf fonksiyonu ekrana yazmamaktadır. stdout isimli bir dosyaya yazamktadır. scanf fonksiyonu klavyeden okumamaktadır. stdin isimli bir dosyadan okuma yapmaktadır. stdout ve stdin dosyalarının gerçekte
+ne olduğu standartlarda belirtilmemiştir. Tabii modern masaüstü sistemlerinde stdout dosyası aslında ekranı kontrol eden terminal aygıt sürücüsünü, stdin dosyası ise klavyeyi kontrol eden terminal aygıt
+sürücüsünü temsil etmektedir. Aygıt sürücüler birer dosya gibi kullanıldığı için bunların bir dosya olması da tasarımla uyumludur. Böylece biz bu sistemlerde aslında stdout dosyasına bir şeyler yazdığımızda
+yazdığımız şeyler aygıt sürücüsüne gider. Aygıt sürücüsü de onları ekrana çıkartır. Benzer biçimde biz stdin dosyasından bir şeyler okumak istediğimizde aslında terminal klavyeyi kontrol eden aygıt sürücüden
+okuma yaparız. O da klavyeden girilenleri bize verir. Aşağıda bu konuya ilişkin bir örnek verilmiştir:
+    * Örnek 1, UNIX/Linux dünyasında aygıt sürücüleri açmakta kullanılan dizin girişleri genel olarak /dev dizininde bulundurulmuştur. Bulunduğunuz terminalde tty komutunu vererek aygıt sürücünüzün ismini
+    öğrenebilrisiniz. Örneğin:
+
+        $tty
+        /dev/pts/1
+
+    Aygıt sürücüler dosya gibi açılıp kullanıldığına göre biz bu aygıt sürücüyü open ile açıp, ona write ile yazma yaparsak yazılanlar o terminale çıkacaktır. Şöyleki:
+
+        int fd;
+
+        if ((fd = open("/dev/pts/1", O_WRONLY)) == -1)
+            exit_sys("open");
+
+        write(fd, "ankara\n", 7);
+
+        close(fd);
+
+    İşte aslında C'nin stdout dosyasına yazma yapan fonksiyonları da neticede write fonksiyonunu kullanarak ekranda çıkacak şeyleri bu aygıt sürücüye yollamaktadır. Örneğin puts fonksiyonunu çağırdığımızda
+    kabaca şu işlemler gerçekleşmektedir:
+
+        puts ---> write(stdout, ....) ----> Aygıt sürücü ----> Ekrana basma
+
+    Aşaıdaki örnekte önce terminal aygıt sürücüsünden (kalvyeden) okuma yapılıp sonra okunanlar ona (ekrana) yazdırılmıştır. Genellikle ekran ve klavye işlemleri tek bir aygıt sürücü ile yapılmaktadır. Yani bu
+    aygıt sürücü hem ekranı hem de klavyeyi konrol etmektedir. Zaten terminal kavramı "ekran ve klavyeyi" içeren bir kavramdır. Dolayısıyla terminal aygıt sürücüsü de her iki aygıtı kontrol eden aygıt sürücüsüdür.
+    Aşağıda ilgili programın kodları verilmiştir:
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+        #include <fcntl.h>
+        #include <unistd.h>
+
+        void exit_sys(const char *msg);
+
+        int main(void)
+        {
+            int fd;
+            char buf[4096];
+            ssize_t result;
+
+            if ((fd = open("/dev/pts/1", O_RDWR)) == -1)
+                exit_sys("open");
+
+            if ((result = read(fd, buf, 4096)) == -1)
+                exit_sys("read");
+
+            buf[result] = '\0';
+
+            if (write(fd, buf, strlen(buf)) == -1)
+                exit_sys("write");
+
+            close(fd);
+
+            return 0;
+        }
+
+        void exit_sys(const char *msg)
+        {
+            perror(msg);
+            exit(EXIT_FAILURE);
+        } 
+
+Öte yandan modrn işletim sistemlerinde açık dosyanın hedefi değiştirebilmektedir. Örneğin stdout dosyasına yazılanlar aslında terminal aygıt sürücüsüne gönderilmektedir. Ancak biz istersek bu dosyaya yazılanların
+başka bir yere örneğin diskte bir dosyaya gönderilmesini sağlayabiliriz. Bu işleme işletim sistemleri dünyasında "IO yönlendirmesi (IO redirection)" denilmektedir. O halde biz örneğin IO yöönlendirmesi yoluyla
+stdout ve stdin dosyalarını başka hedeflere de yönlendirebiliriz. C'de stdin, stdout ve stderr değişken isimleri aslında FILE * türünden dosya bilgi göstericisi belirtmektedir. Bunlar masaüstü sistemlerde ekran ve
+klavyeyi kontrol eden aygıt sürücü dosyaları olarak açılmışlardır. Yani biz stdout dosyasına bir şey yazdığımızda aslında yazdığımız şeyler terminal aygıt sürücüsüne gönderilmektedir. Ancak bu değişkenlerin
+FILE * türünden yani tamponlu bir dosya belittiğine dikkat ediniz. Yani diğer dosyalar için nasıl bir tampon eşliğinde aktarım yapılıyorsa bu aygıt sürücü dosyalarına da yine bir tampon eşliğinde aktarım
+yapılmaktadır. <stdio.h> içerisinde başı f ile başlamayan fonskiyonlar da aslında birer dosya fonksiyonudur. Ancak onlar default olarak stdout ve stdin dosyalarını kullanmaktadır. Yani örneğin aşağıdaki iki
+fonksiyon çağrısı tamamen eşdeğerdir:
+
+    fprintf(stdout, ...);
+    printf(....);
+
+Aşağıdaki gibi çağrı da eşdeğerdir:
+
+    fscanf(stdin, ...);
+    scanf(....);
+
+Zaten C standartları örneğin fprintf fonksiyonunu açıklayıp printf fonksiyonu için fprintf fosnksiyonunun stdout dosyasına yazan biçimi diye kısa açıklama bulundurmuştur. Bir proses çalışmaya başladığında, genel
+olarak 0, 1 ve 2 numaralı dosya betimleyicileri zaten açık durumdadır. Sistemlerden,
+    >> UNIX/Linux Sistemlerinde: 0 numaralı betimleyici klavyeyi temsil eden terminal aygıt sürücüsüne ilişkindir. Yani bu betimleyiciden read fonksiyonu ile okuma yapılmak istenirse aslında klavyeden okuma
+    yapılacaktır. stdin betimleyicisinin O_RDONLY modda açıldığı varsayılmaktadır. 1 numaralı betimleyici de yine terminal aygıt sürücüsüne ilişkindir. Ancak bu betimleyici ile yazma yapıldığında terminal aygıt
+    sürücüsü yazılanları ekrana bastırmaktadır. 1 numaralı betimleyicinin O_WRONLY açıldığı kabul edilmektedir. 2 numaralı betimleyici default durumda tamamen 1 numaralı betimleyicde olduğu gibi terminal aygıt
+    sürücüsüne ilişkindir. 2 numaralı betimleyici ile yazma yapılırsa yazılanlar yine ekrana basılacaktır. UNIX/Linux dünyasında,
+        
+        -> 0 numaralı betimleyiciye "stdin betimleyicisi",
+        -> 1 numaralı betimleyiciye "stdout betimleycisi",
+        -> 2 numaralı betimelyiciye de "stderr betimleyicisi"
+        
+    denilmektedir.Bizim açmadığımız 0, 1 ve 2 numaralaı betimleyicileri özel bir durum yoksa biz kapatmamalıyız. C'deki stdin, stdout ve stderr dosya bilgi göstericileri arka planda UNIX/Linux sistemlerinde
+    sırasıyla 0, 1 ve 2 numaralı betimleyicileri kullanmaktadır. 
+        * Örnek 1,
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <unistd.h>
+
+            #define BUFFER_SIZE	4096
+
+            void exit_sys(const char *msg);
+
+            int main(void)
+            {
+                char buf[BUFFER_SIZE];
+                ssize_t result;
+
+                if ((result = read(0, buf, BUFFER_SIZE)) == -1)
+                    exit_sys("read");
+
+                if (write(1, buf, result) == -1)
+                    exit_sys("write");
+
+                return 0;
+            }
+
+            void exit_sys(const char *msg)
+            {
+                perror(msg);
+                exit(EXIT_FAILURE);
+            }
+
+    >> Windows Sistemlerinde: Benzer biçimde Windows sistemlerinde de bir proses çalışmaya başladığında genellikle (ama her zaman değil) klavye, ekran ve hata dosyalarını temsil eden dosyalar açık durumdadır. Bu
+    dosyalar yine terminal aygıt sürücüsüne ilişkindir. Ancak bunların Windows'taki HANDLE değerleri önceden belli değildir. Dolayısıyla program çalışırken programcı tarafından GetStdHandle isimli bir API
+    fonksiyonuyla elde edilirler. Fonksiyonun prototipi şöyledir:
+
+        HANDLE WINAPI GetStdHandle(
+            DWORD nStdHandle
+        );
+
+	Fonksiyona parametre olarak aşağıdakiklerden biri girilebilir:
+
+        STD_INPUT_HANDLE
+        STD_OUTPUT_HANDLE
+        STD_ERROR_HADNLER
+
+	Bu değerler biçizm hangi standart handle'ı elde edeceğimizi belirtmektedir. Fonksiyon başarısızlık durumunda INVALID_HANDLE_VALUE değerine geri döner. Prosesin standart handle'ları olmayabilir. Bu durumda
+    fonksiyon NULL değerine geri döner. Ancak GetLastError değeri bu durumda set edilmemektedir. Windows sistemlerinde de standart C kütühanesindeki stdin, stdout ve stderr dosya bilgi göstericileri GetStdHandle
+    ile elde eidlen aygıt sürücülere ilişkin dosyaları kullanmaktadır. Aşağıdaki örnekte Windows sistemlerinde önce stdin ve stdout dosyalarının handle değerleri elde edilmiş sonra stdin dfosyasından okuma yapılıp
+	okunanlar stdout dosyasına yazdırılmıştır.
+        * Örnek 1,
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <Windows.h>
+
+            #define BUFFER_SIZE		4096
+
+            void ExitSys(LPCSTR lpszMsg);
+
+            int main(void)
+            {
+                HANDLE hStdIn, hStdOut;
+                char buf[BUFFER_SIZE];
+                DWORD dwRead, dwWritten;
+
+                if ((hStdIn = GetStdHandle(STD_INPUT_HANDLE)) == INVALID_HANDLE_VALUE)
+                    ExitSys("GetStdHandle");
+                
+                if ((hStdOut = GetStdHandle(STD_OUTPUT_HANDLE)) == INVALID_HANDLE_VALUE)
+                    ExitSys("GetStdHandle");
+
+                if (hStdIn == NULL || hStdOut == NULL) {
+                    fprintf(stderr, "Standard input or standard output handle doesn't exist!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                if (!ReadFile(hStdIn, buf, BUFFER_SIZE, &dwRead, NULL))
+                    ExitSys("ReadFile");
+                    
+                if (!WriteFile(hStdOut, buf, dwRead, &dwWritten, NULL))
+                    ExitSys("WriteLile");
+
+                return 0;
+            }
+
+            void ExitSys(LPCSTR lpszMsg)
+            {
+                DWORD dwLastErr = GetLastError();
+                LPTSTR lpszErr;
+
+                if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                    fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                    LocalFree(lpszErr);
+                }
+
+                exit(EXIT_FAILURE);
+            }
+
+Biz default olarak stderr dosyasının (hem C'de hem de POSIX ve API düzeyinde) stdout dosyasıyla aynı terminal aygıt sürücüsüne yönlendirildiğini belirtmiştik. Pekiyi stdout ile stderr arasında ne farklılık vardır.
+Biz stdout dosyasına da stderr dosyasına bir şeyler yazdırdığımızda ikisi de ekranda görüntülenmektedir. Bir dosya dosyanın bir hedefi vardır. Ancakbu hedef değiştirilebilmektedir. Dosyanın hedefenin hedefinin
+değiştirilemsine işletim sistemi dünyasında "IO Yönlendirmesi (IO Redirection)" denilmektedir. Örneğin stdout dosyasının hedefi ekranı kontrol eden eaygıt sürücüsü iken biz onu bir disk dosyasına yönlendirebiliriz. Bu durumda printf fonksiyonu gibi stdout dosyasına yazan fonksiyonlar aslında dosya yazmış 
+olurlar. Benzer biçimde biz stdin ve stderr dosyalarını da yönlendirebiliriz. IO yönlendirmelerinin kernel tarafından nasıl yapıldığı ileride ayrı bir başlıka ele alınacaktır. Biz şimdilik kullanıcı düzeyinde IO 
+yönlenidrmesi ile ilgileneceğiz. Biz bir programı kabuk üzerindne çalıştırırken program isminden sonra ">" karakterini kullanırsak çalıştırdığımız programın stdout dosyasını yönlendirmiş oluruz. Örneğin:
+
+    ./sample > test.txt 
+
+Burada stdou dosyasına yazılanlar artık ekrana çıkmatacak "test.txt" dosyasına yazılacaktır. Tabii stderr dosyasına yazılanlar yine ekrana çıkmaya devam edecektir. Kabuk üzerinde program isminden sonra "2>"
+karakterlerini kullandığımızda ise stderr dosyasını yönlendirmiş oluruz. Örneğin:
+
+    ./sample 2> test.txt
+
+Burada sample programının stderr dosyasına yazdığı şeyler artık ekranda görülmeyecek "test.txt" dosyasına yazılacaktır. Tabii iki yönlendirmeyi 
+birlikte de yapabliriz. Örneğin:
+
+    ./sample > test.txt 2> mest.txt
+
+Kabukta yönlendirme Windows'un komut satırında da aynı biçimde yapılmaktadır. Biz programımızdaki hata mesajlarını stderr dosyasına yazdırmalıyız. Default durumda bu hata mesajları ekrana çıkacaktır. Ancak
+programı çalıştıran kişiler IO yönlendirmesi ile hedefi değiştirebilecekleridir. Eğer bi hata mesajlarını doğrudan stdout dosyasına yazdırırsak bu durumda programın hata mesajlarıyla normal mesajları ayırmanın
+bir yolu kalmaz. Örneğin find isimli programla bir dosyayı dizin ağacında aşağıdaki gibi arayacak olalım:
+
+    $>find / -name "sample.c"
+
+find bu ii yaparken erişim haklarından dolayı bazı dizinler okuyamayacaktır. Okuyamadığı dizinler için hata mesajlarını program stderr dosyasına yazdırmaktadır. Default durumda stderr dosyasına yazılanlar ekrana
+çıkacaktır. Böylece ekranda hem hata mesajları hem de normal mesajlar görünecektir. Ancak biz stderr dosyasını bir dosyaya yönlendirirsek iki tür mesajın da ekranda gözükmesini engellmiş oluruz. Örneğin:
+
+    $>find / -name "sample.c" 2> err.txt
+
+Burada kullanıcı hata mesajlarının dosyada gereksiz yer kaplamasını da istemeyebilir. UNIX/Linux sistemlerinde /dev dizinin altında bazı özel aygıt sürücüler vardır. Örneğin /dev/null aygıt sürücüsü kendisne
+yazılan bilgileri doğrudan atmaktadır. O halde find programını şöyle de öalıştırabiliriz:
+
+    $>find / -name "sample.c" 2> /dev/null
+
+Bu kullanımın bir benzeri Windows'ta NUL biçiminde bulunmaktadır. stdout ve stderr dosyalarını aynı hedefe yönlendirme aaşağıdaki gibi yapılmamalıdır:
+
+    ./sample > test.txt 2> test.txt
+
+Çünkü genel olarak kabuk programları her yönlendirme sembolünde ilgili dosyayı yeniden "truncate" modunda açmaktadır. Eğer böyle bir şey isteniyorsa aşağıdkai gibi yapılmalıdır:
+
+    ./sample > test.txt 2>&1
+
+Burada "2>&1" karakterleri "2 numaralı betimleyiciyi (stderr betimleyicisini) bir numaralı betimleyici ile (stdout betimleyicisi) aynı dosyaya yönlendir" anlamına gelmektedir. Normal olarak klavyeden okunacak
+bilgiler sanki klavyeden girilmiş gibi dosyadan da okunabilir. Bunun için kabuk üzerinde "<" sembolü ile stdin dosyasının yönlendirilmesi gerekir. Örneğin:
+
+    $>sample < test.txt
+
+Burada sample programının stdin dosyasından okudukları aslında "test.txt" dosyasından okunacaktır. Yani biz bu işlemle default olarak terminal aygıt sürücüsüne yönlendirilmiş olan stdin dosyasını açıkça
+"test.txt" dosyasına yönlendirmiş olduk. Biz bir dosyadan okuma yapan dosya sonuna geldiğinde sonlanan bir program yazmış olalım. Bu programı stdin dosyasından çalışır hale getirdiğimizde EOF etkisi nasıl
+oluşturulacaktır. Ne de olsa terminal gerçek bir dosya değildir. Yani terminalin (kalvyenin) sonuna gelmek biçiminde bir kavram yoktur. İşte terminal aygıt sürücüleri EOF etkisi yaratan özel tuş kombinasyonları
+kullanmaktadır. UNIX/Linux dünyasında "Ctrl+d" tuşları Windows dünyasında "Ctrl+Z" tuşları "dosya sonu" etkisi oluşturmaktadır. Tabii bu tuşlara bastığımızda terminali kapatmış olmayız. Yaşnızca anlık bir EOF
+etkisi oluşturulmaktadır. Yine stdin dosyasından okuma yapmaya devam edebiliriz. EOF etkisi yaratmak için Ctrl+z ve Ctrl+d tuşlarına satır başlarında basınız. Pek çok terminal aygıt sürücüsü ancak satır başlarında
+bu özel karakterlere basılmışsa EOF etkisi yaratmaktadır. Aşağıda bir dosyayı okuyarak ekrana yazdıran bir C programı verilmiştir. Eğer program komut satırı argümanı verilmeden çalıştırılırsa stdin dosyasından
+(yani klavyeden) okuma yapmaktadır. İşte bu durumda bu programdan çıkabilmek için UNIX/Linux sistemlerinde "Ctrl+d" tuşlarına, Windows sistemlerinde ise "Ctrl+Z" tuşlarına basmak gerekir. 
+    * Örnek 1,
+        #include <stdio.h>
+        #include <stdlib.h>
+
+        int main(int argc, char *argv[])
+        {
+            FILE *f;
+            int ch;
+
+            if (argc > 2) {
+                fprintf(stderr, "wrong number of arguments!..\n");
+                exit(EXIT_FAILURE);
+            }
+
+            if (argc == 1)
+                f = stdin;
+            else 
+                if ((f = fopen(argv[1], "r")) == NULL) {
+                    fprintf(stderr, "cannot open file: %s\n", argv[1]);
+                    exit(EXIT_FAILURE);
+                }
+
+            while ((ch = fgetc(f)) != EOF)
+                putchar(ch);
+
+            if (ferror(f)) {
+                fprintf(stderr, "cannot read file!..\n");
+                exit(EXIT_FAILURE);
+            }
+
+            fclose(f);
+        
+            return 0;
+        }
+
+Öte yandan yüksek seviyeli biçimde "dosya yönlendirmesi (IO redirection)" freopen isimli standart C fonksiyonu kullanılmaktadır. Ancak bunun tersini yapan (yüksek seviyeli) bir fonksiyon mevcut değildir. 
+    >> "freopen" : Fonksiyonun prototipi şöyledir:
+
+        #include <stdio.h>
+        FILE *freopen(const char *path, const char *mode, FILE *stream);
+
+    Fonksiyonun birinci parametresi yönlendirmenin yapılacağı disk dosyasını belirtmektedir. İkinci parametre bu dosyanın nasıl açılacağını belirtir. Eğer bu ikinci parametre "w" içeren bir parametre ise
+    yönlendirme bu dosyaya yazılacak biçimde yapılmaktadır. Eğer bu parametre "r" içeren biçimdeyse yönlendirme bu dosyadan okunacak biçimde yapılmaktadır. Fonksiyonun son parametresi yönlendirilecek dosyaya
+    ilişkin dosya bilgi göstericisini (stream) almaktadır. Fonksiyon başarı durumunda dosyaya ilişkin dosya bilgi göstericisine, başarısızlık durumunda NULL adrese geri dönmektedir. Fonksiyonun bize verdiği
+    dosya bilgi göstericisi birinci parametreyle belirttiğimiz dosyaya ilişkin dosya bilgi göstericisidir. Bu işlem sonrasında son parametreyle belirtilmiş olan gösterici ile fonksiyonun geri döndürdüğü gösterici
+    aynı FILE nesnesini gösteriyor durumda olur. Örneğin:
+
+        FILE *f;
+        if ((f = freopen("test.txt", "w", stdout)) == NULL) {
+            fprintf(stderr, "cannot open file!..\n");
+            exit(EXIT_FAILURE);
+        }
+
+    Burada stdout dosyası "test.txt" dosyasına yönlendirilmiş durumdadır. Yani artık stdout dosyasına yazılacak şeyler "test.txt" dosyasına yazılacaktır. Aslında fonksiyon stdout göstericisinin gösterdiği
+    yerdeki FILE nesnesi üzerinde değişiklik yapmaktadır. Dolayısıyla stdout gösteicisinin gösterdiği yer aslında değişmemekte ve freopen fonksiyonu yine aynı adresi geri döndürmektedir. Dolayısıyla freopen
+    fonksiyonunun geri döndürdüğü dosya bilgi göstericisine aslında gerçek anlamda gereksinim duyulmamaktadır. Aşağıda freopen fonksiyonunun kullanımına bir örnek verilmiştir. 
+        * Örnek 1, 
+            #include <stdio.h>
+            #include <stdlib.h>
+
+            int main(void)
+            {
+                FILE *f;
+                
+                if ((f = freopen("test.txt", "w", stdout)) == NULL) {
+                    fprintf(stderr, "cannot open file!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                for (int i = 0; i < 10; ++i)
+                    printf("%d\n", i);
+
+                fprintf(f, "Ok\n");
+
+                return 0;
+            }
+
+        * Örnek 2, 
+            #include <stdio.h>
+            #include <stdlib.h>
+
+            int main(void)
+            {
+                FILE *f;
+                int ch;
+
+                if ((f = freopen("test.txt", "r", stdin)) == NULL) {
+                    fprintf(stderr, "cannot open file!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                while ((ch = getchar()) != EOF)
+                    putchar(ch);
+
+                if (ferror(stdin)) {
+                    fprintf(stderr, "cannot read file!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                fclose(f);
+
+                return 0;
+            }
+
+C'deki (işletim sisteminin değil) stdin, stdout	ve stderr dosyaları da diğer dosyalarda olduğu gibi tamponlu çalışmaktadır. Yani örneğin biz stdout dosyasına bir şeyler yazdığımız zaman önce o tampona yazılmakta
+sonra işletim sisteminin sistem fonksiyonlarıyla (POSIX fonksiyonları ya da Windows API fonksiyonlarıyla) aktarım yapılmaktadır. Pekiyi C'nin stdin, stdout ve stderr dosyaları iiçin default tamponlama modu nedir?
+Standartlar şunları söylemektedir
+
+    -> stdout ve stdin dosyaları işin başında eğer interaktif bir aygıta yönlendirilmişse hiçbir zaman tamponlamalı modda olamaz. Ancak satır tamponlamalı ya da sıfır tamponlamalı modda olabilir. Ancak bu dosyalar
+    interaktif olmayan bir aygıta yönlendirilmişse işin başında tam tamponlamalı modda olmak zorundadır. Terminal (klavye ve ekran) interaktif aygıt kabul edilmektedir. Normal disk dosyaları interaktif olmayan
+    aygıtı temsil etmektedir. 
+
+    -> stderr dosyası ister interaktif bir aygıta isterse interaktif olmayan bir aygıta yönlendirilmiş olsun hiçbir zaman işin başında tam tamponlamalı modda olamaz. 
+
+Standartlardaki bu anlatımdan çıkan sonuçlar şunlardır:
+
+    -> Biz stdin ve stdout dosyalarını diskte bir dosyaya yönlendirirsek kesinlikle tam tamponlamalı modda olurlar. Ancak bir yönlendirme yapmazsak C derleyicilerini yazanlara bağlı olarak satır tamponlamalı ya da
+    sıfır tamponlamalı modda olabilirler. Gerçekten de Windows sistemlerinde işin başında stdout "sıfır tamponalamalı" modda ilen Linux sistemlerinde "satır tamponlamalı" moddadır. 
+
+    -> stderr dosyası bir disk dosyasına yönlendirilmiş olsa bile tam işin başında tamponalamalı modda olamamaktadır. Ancak satır tamponlamalı ya da sıfır tamponlamalı modda olabilmektedir. 
+
+Bu durumda örneğin aşağıdaki gibi bir printf çağrısında yazılanların ekranda görünmesi garanti değildir:
+
+    printf("this is a test");
+
+Bu durumda,
+
+    -> Eğer ilgili derleyici satır tamponlamalı mod kullanıyorsa (Linux derleyicilerinde olduğu gibi) bu yazılanlar henüz ekranda görünmeyecektir.
+    -> Eğer ilgil derleyici sıfır tamponlamalı mod kullanıyorsa (Windows derleyicilerinde olduğu) gibi bu yazılanlar ekranda görünecektir. 
+
+Pekiyi yukarıdaki printf çağrısında çağrı bittikten sonra yazdırılanların ekranda çıkmasını nasıl garanti ederiz? Bunu garanti etmek için şunlar yapılabilir:
+
+    -> Yazdırılacak şeylerin sonuna "\n" karakteri eklenebilir. En kötü olasılık satır tamponalaması olacğına göre yzılanlar kesinlikle printf bitince ekranda görünecektir. Örneğin:
+
+        printf("this is a test\n");
+
+    Tabii burada imleç aşağı satırın başına da geçecektir. 
+
+    -> printf çağrısından sonra stdout tamponu flush edilebilir. Örneğin:
+        
+        printf("this is a test");
+        fflush(stdout);
+
+    -> stdout dosyası setbuf ya da setvbuf fonksiyonlarıyla sıfır tamponlamalı moda sokulabilir. Ancak bunun hemen programın başında yapılması gerekir. Örneğin:
+
+        setbuf(stdout, NULL);
+        printf("this is a test");
+
+C derleyicilerinin çoğunda stdin dosyasından okuma yapılmak istendiğinde bu fonksiyonlar kendi içlerinde önce stdout dosyasını flush etmektedir. Bu nedenle aşağıdaki bir kodda stdout default durumda satır
+tamponlamalı olsa bile yazı ekranda görünebilecektir:
+
+    printf("input a number:");
+    scanf("%d", &val);
+
+Ancak C standartlarında böyle bir garanti verilmemiştir. Taşınabilirlik için fflush işleminin açıkça uygulanması gerekir:
+
+    printf("input a number:");
+    fflush(stdout);
+    scanf("%d", &val);
+
+Her ne kadar C'nin stdin dosyası standartlarda işin başında "satır tamponlamalı ya da sıfır tamponlamalı" modda olabilir denmişse de pratikte hep bu dosya satır tamponlamalı biçimde oluşturulmaktadır. Bunun nedeni
+işletim sistemlerinin terminal aygıt sürücülerinin klavyeden satır satır okuma yapmasıdır. stdin dosyası istense de bu sistemlerde sıfır tamponlamalı moda sokulamamaktadır. Aşağıdaki programı Windows ve Linux
+sistemlerinde ayrı ayrı derleyerek çalıştrınız. 
+    * Örnek 1,
+        #include <stdio.h>
+
+        int main(void)
+        {
+            printf("ankara");
+
+            for (;;)
+                ;
+            
+            return 0;
+        }
+
+stdin dosyasından (klavyeden) biz bir karakter okumak istesek bile bu dosya "satır tamponlamalı" modda olduğu için bir satırlık bilgi klavyeden okunup tampona yerleştirilecek ve tampondaki, ilk karakter
+okunacaktır. Her zaman satır tamponlamada satırın sonunda '\n' karakteri tampona yerleştirilmektedir. Örneğin:
+
+    ch = getchar();
+    ch = getchar();
+
+Burada birinci getchar fonksiyonu eğer stdin tamponununda karakter varsa hemen karakteri tampondan alır. Ancak stdin tamponu boşsa bir satırlık bilgiyi tampona yerleştirir ve onun ilk karakterini verir. Biz
+kalvyeden "a" tuşuna basıp ENTER tuşuna basmış olalım. stdin tamponu şöyle olacaktır:
+
+    a\n
+
+İlk getchar fonksiyonu a karakterini tampondna alıp geri döncektir. İkinci getchar fonksiyonu da tampon dolu olduğu için tampondaki \n karakterini alıp hemen geri dönecektir. C'ye yeni başlayanlar ikinci getchar
+fonksiyonunun neden klavyeden okumaya yol açmadığına şaşırmaktadır. Muhtemelen burada satır tamponlamalı çalışma mekanizması bilinmemektedir. 
+    * Örnek 1.0, Aşağıdaki programda birinci getchar stdin tamponu boş olduğu için bir satırlık bilgiyi stdin tamponuna yerleştirecek ve tampondaki ilk karakter ile geri dönecektir. İkinci getchar tampon boş
+    olmadığı tamponda \n karakteri olduğu için onu alıp onunla geri dönecektir. Dolayısıyla ikinci getchar klavyeden bir giriş beklemeyecektir. 
+        #include <stdio.h>
+
+        int main(void)
+        {
+            int ch;
+
+            ch = getchar();
+            printf("%c (%d)\n", ch, ch);
+
+            ch = getchar();
+            printf("%c (%d)\n", ch, ch);
+
+            return 0;
+        }
+
+    * Örnek 1.1, stdin işin başında açılmış olan bir C dosyası olduğuna göre onun toplamda tek bir tamponu vardır. Yani stdin dosyasından okuma yapan standart C fonksiyonları aynı tamponu kullanmaktadır. Aşağıdaki
+    örnekte birinci getchar stdin tamponunu bir satır ile dolduracaktır. Tamponun sonunda da \n karakteri bulunacakır. gets fonksiyonu (her ne kadar C11 ile C'den kaldırıldıysa da) \n karakterine kadar stdin 
+    dosyasından okuma yapıp okudukarını parametresiyle belirtilen adrsten itibaren yerleştirmektedir. gets fonksiyonu stdin dosyasında \n karakterini gördüğünde onu okur ancak parametresiyle aldığı adrese
+    yerleştirmez. Onun yerine bu adrese null karakter yerleştirmektedir. Dolayısıyla aşağıdaki örnekte gets fonksiyonu klavyeden bir giriş beklemeyecektir. 
+        #include <stdio.h>
+
+        int main(void)
+        {
+            int ch;
+            char buf[1024];
+
+            ch = getchar();
+            printf("%c\n", ch);
+
+            gets(buf);
+            printf("%s\n", buf);
+
+            return 0;
+        }
+
+    * Örnek 1.2, Aşağıdaki döngü nasıl bir etki oluşturur?
+
+        int ch;
+        ...
+
+        while ((ch = getchar()) != EOF)
+            putchar(ch);
+
+	Burada ilk getchar stdin tamponu boş olduğu için bir satır bilgi isteyip onu tampona yerleştirecektir. Biz burada "ankara" yazısını girip ENTER tuşuna basmış olalım. Tamponun durumu şöyle olacaktır:
+
+	    ankara\n
+
+	İlk getchar tampondan 'a' karakterini alıp bunu ekrana (stdout dosyasına) yazdıracaktır. Diğer getchar çağrıları tampon dolu olduğu için diğer karakterleri alıp yazdıracktır. Tamponun sonundaki \n karakteri
+    de alınıp ekrana yazdırılacaktır. Ancak bu karakter ekrana yazdırıldığında imleç aşağı satırın başına geçecektir. Artık tampon boştur. O halde yazdığımız satırın aynısı ekrana yazılmış olacaktır. Tampon boş
+    olduğu için aynı olaylar yinelenecektir. Burada Windows'ta Ctrl+z tuşları ile UNIX/Linux sistemlerinde Ctrld+d tuşları ile EOF etkisi yaratarak döngünden çıkabiliriz. 
+        #include <stdio.h>
+
+        int main(void)
+        {
+            int ch;
+
+            while ((ch = getchar()) != EOF)
+                putchar(ch);
+
+
+            return 0;
+        }
+
+    * Örnek 1.3.0, Biz gerçekten klavyedem yeni bir giriş yapılması istiyorsak bu durumda stdin tamponunu manuel bir biçimde boşaltmamız gerekir. stdin tamponunu başaltabilen standart bir C fonksiyonu yoktur. '\n'
+    karakteri görene kadar stdin tamponundan karakterleri atmak için aşağıdaki gibi bir döngü yeterli olmaktadır:
+
+        while (getchar() != '\n')
+            ;
+
+    Bu döngüde en son '\n' karakteri okunacak ve döngüden çıkılacaktır. Döngüden çıkıldığında stdin tamponu artık boş olduğuna göre sonraki fonksiyonlar klavyeden yeni bir giriş isteyecektir. Bu tür durumlarda
+    stdin dosyasının bir disk dosyasına yönlendirilmesi ve dosyanın sonunda '\n' karakterinin olmaması bir sonsuz döngü oluşumuna yol açabilir. Bu durumu ihmal edebilirsiniz. Eğer bu durumu da ele almak 
+    istiyorsanız döngüyü aşağıdaki gibi düzenleyebilirsiniz:
+
+        while ((ch = getchar()) != '\n' && ch != EOF)
+            ;
+                
+    stdin taponun boşaltılması için bir fonksiyon yazılabilir:
+
+        void clear_stdin(void)
+        {
+            int ch;
+
+            while ((ch = getchar()) != '\n' && ch != EOF)
+                ;
+        }
+	
+	Tabii bu fonksiyonu biz zaten boşken çağırırsak fonksiyon bizden giriş ister. Bu fonksiyonu tampon doluyken çağırmalıyız. 
+        #include <stdio.h>
+
+        void clear_stdin(void)
+        {
+            int ch;
+
+            while ((ch = getchar()) != '\n' && ch != EOF)
+                ;
+        }
+
+        int main(void)
+        {
+            int ch;
+            char buf[1024];
+
+            ch = getchar();
+            printf("%c\n", ch);
+
+            clear_stdin();
+
+            ch = getchar();
+            printf("%c\n", ch);
+
+            clear_stdin();
+
+            gets(buf);
+            puts(buf);
+
+            return 0;
+        }
+
+    * Örnek 1.3.1, Anımsanacağı gibi blok içeren makroların do-while biçiminde yazılması gerekmektedir. Yukarıdaki fonksiyon makro biçiminde aşağıdaki gibi yazılabilir:
+
+        #define clear_stdin()										\
+            do														\
+            {														\
+                int ch;												\
+                                                                    \
+                while ((ch = getchar()) != '\n' && ch != EOF)		\
+                    ;												\
+            }														\
+            while (0)
+
+    Aşağıda bu makronun kullanımına ilişkin bir örnek verilmiştir:
+        #define clear_stdin()										\
+                do														\
+                {														\
+                    int ch;												\
+                                                                        \
+                    while ((ch = getchar()) != '\n' && ch != EOF)		\
+                        ;												\
+                }														\
+                while (0)
+
+        int main(void)
+        {
+            int ch;
+            char buf[1024];
+
+            ch = getchar();
+            printf("%c\n", ch);
+
+            clear_stdin();
+
+            ch = getchar();
+            printf("%c\n", ch);
+
+            clear_stdin();
+
+            gets(buf);
+            puts(buf);
+
+            return 0;
+        }
+
+İstersek işin başında stdout dosyasının da default tapmonlama modunu setbuf ya da setvbuf fonksiyonlarıyla değiştirebiliriz. 
+    * Örnek 1,
+        #include <stdio.h>
+
+        int main(void)
+        {
+            setvbuf(stdout, NULL, _IONBF, 0);
+            
+            printf("ali");
+
+            for (;;)
+                ;
+
+            return 0;
+        }
+
+Şimdi de stdin dosyasından okuma yapan standart C fonksiyonları üzerinde biraz duralım. Bu fonksiyonlardan,
+    >> "gets" : Bu fonksiyon yukarıda belirttiğimiz gibi C99'da deprecated yapılmış C11'de C'den çıkartılmıştır. Ancak bu fonksiyon yine de yaygın derleyicilerde geçmişe uyum için bulundurulmaktadır. Fonksiyonun
+    prototipi şöyledir:
+
+        #include <stdio.h>
+        char *gets(char *s);
+        
+    gets fonksiyonu stdin dosyasından okuma yapar okuduğu karakterleri programcının belirlediği diziye yerleştirir. En son '\n' karakterini okuduğunda ya da dosya sonuna gelindiğinde bu karakter yerine
+    hedef diziye '\0' yerleştirip işlemini sonlandırmaktadır. Yani gets fonksiyonu '\n' karakteri görene kadar ya da dosya sonunagelinene kadar stdin dosyasından okuma yapmaktadır. Ancak '\n' karakterini
+    hedef diziye yerleştirmemektedir. gets fonksiyonu başarı durumunda parametresiyle belirtilen adresin aynısına geri dönmektedir. Eğer gets hiçbir karakter okuyamadan EOF ile karşılaşırsa diziye bir
+    yerleştirme yapmaz ve NULL adresle geri döner. gets aynı zamanda IO hatası oluştuğunda da NULL adresle geri dönmektedir. Bu durumda dizinin içeriği yarı doldurulmuş bir biçimde olabilir. gets fonksiyonu
+    genellikle getchar fonksiyonu kullanılarak yazılmaktadır. Tipik bir gerçekleştirimi aşağıdaki gibi olabilir.
+        * Örnek 1,
+            #include <stdio.h>
+
+            char *mygets(char *s);
+
+            int main(void)
+            {
+                char buf[1024];
+
+                printf("Bir yazi giriniz:");
+                fflush(stdout);
+
+                mygets(buf);
+                puts(buf);
+                
+                return 0;
+            }
+
+            char *mygets(char *s)
+            {
+                int ch;
+                size_t i;
+
+                for (i = 0; (ch = getchar()) != '\n' && ch != EOF; ++i)
+                    s[i] = ch;
+
+                if (ch == EOF) 
+                    if (i == 0 || ferror(stdin))
+                        return NULL;
+
+                s[i] = '\0';
+
+                return s;
+            }
+
+    >> "gets_s" : Yukarıda da belirtitğimiz gibi C11'de gets fonksiyonu kaldırılmış ve yerine isteğe bağlı biçimde gets_s fonksiyonu eklenmiştir. gets_s Microsoft derleyicilerinde zaten uzun süredir
+    bulunmaktadır. Ancak gcc ve clang'ın kullandığı glibc kütüphanesinde bu fonksiyon bulunmamaktadır. gets_s fonksiyonunun prototipi şöyledir:
+
+	    char *gets_s(char *s, rsize_t n);
+	
+	Fonksiyon stdin dosyasındna en fazla iinci parametresiyle beliritlen sayıdan bir eksik karakter okur. Yine'\n' karakterini gördüğünde yada dosya sonuna geldiğinde ya da IO hatası oluştuğunda işlemini
+    sonlandırır. Fonksiyonun geri dönüş değeri gets fonksiyonundaa olduğu gibidir. 
+        * Örnek 1, Aşağıda bu fonksiyonun gerçekleştirimi yapılmıştır. 
+            #include <stdio.h>
+
+            char *mygets_s(char *str, size_t size);
+
+            int main(void)
+            {
+                char buf[5];
+
+                mygets_s(buf, 5);
+                puts(buf);
+                
+                return 0;
+            }
+
+            char *mygets_s(char *str, size_t n)
+            {
+                size_t i;
+                int ch;
+
+                if (str == NULL || n == 0)
+                    return NULL;
+
+                for (i = 0; i < n - 1; ++i) {
+                    if ((ch = getchar()) == '\n')
+                        break;
+                    if (ch == EOF) {
+                        if (i == 0 || ferror(stdin))
+                            return NULL;
+                        break;
+                    }
+
+                    str[i] = ch;
+                }
+                
+                str[i] = '\0';
+
+                return str;
+            }
+
+    >> "fgets" : gets fonksiyonu gğvensiz olduğundan ve C'den kaldırıldığı için ve gets_s fonksiyonu da isteğe bağlı bulundurulduğu için programcılar gets yerine fgets fonksiyonunu tercih etmektedir. fgets
+    fonksiyonunun prototipini anımsayınız:
+
+        #include <stdio.h>
+        char *fgets(char *s, int size, FILE *stream);
+
+    fgets fonksiyonu gets_s fonksiyonuna benzemekle birlikte önemli bir farklılığa sahiptir. fgtes eğer '\n' karakterini erken görürse bu '\n' karakterini de diziye yerleştirmektedir. Oysa gets ve gets_s
+    hiçbir zaman '\n' karakterini diziye yerleştirmemektedir. fgets fonksiyonunun diğer davranışları gets_s fonksiyonundaki gibidir. Örneğin:
+
+        fgets(buf, 10, stdin);
+
+    Burada fgtes en fazla 9 karakter okuyacaktır. Çünkü dizinin sonuna null karakteri de yerleştirecektir. Girilen karakterler şunlar olsun:
+
+        ankara\n
+
+    Burada fgtes '\n' dahil olmak üzere bu karakterlerin hepsini diziye yerleştirir ayrıca yazının sonuna null karakteri de ekler. Şimdi girilen karakterler şunlar olsun:
+
+        kastamonu\n
+
+    Burada fgets 9 karakter okurken '\n' karakterini görmediği için '\n' karakterini diziye yerleştirmez. Ancak null karakteri diziye yerleştirir. Yine fgets henüz hiçbir karakter okunmadan dosya sonuna
+    gelinmişse NULL adresle geri dönmektedir. Normal durumda  fgets parametresi ile belirtilen adresin aynısına geri dönmektedir. Görüldüğü fgets maalesef bazı durumlarda '\n' karakterini diziye yerleştirmekte
+    bazı durumlarda yerleştirmemektedir. İşte programcılar genellikle fgets çağrısında sonra "eğer diziye '\n' karakteri yerleştirilmişse onun yerine null karakteri yerleştirmektedir. fgets fonksiyonu ile stdin
+    dosyasından yazı okuma işlemi tipik olarak şöyle yapılmaktadır:
+
+        char buf[10];
+        char *str;
+        ...
+
+        fgets(buf, 10, stdin);
+        if ((str = strchr(buf, '\n')) != NULL)
+            *str = '\0';
+
+    Burada dizinin sonunda '\n' karakterinin olup olmadığına bakılmış eğer '\n' karakteri dizisinin sonunda varsa onun yerine null karakter diziye yerleştirilmiştir. Burada fgtes hiçbir okuma yapılmadan dosya
+    sonu ile karşılaşırsa (yani örneğin kullanıcı hemen Ctrl+z ya da Ctrl+d tuşlarına basarsa) bir anomali oluşacaktır. Programcı bu durumu da eğer gerekiyorsa kontrol etmelidir. 
+
+    >> "scanf" : scanf fonksiyonunun prototipi şöyledir:
+
+        #include <stdio.h>
+        int scanf(const char *format, ...);
+
+	Fonksiyon aslında fscanf fonksiyonunun stdin dosyasından çalışan biçimidir:
+
+        #include <stdio.h>
+        int fscanf(FILE *f, const char *format, ...);
+
+	scanf fonksiyonunun bazı ayrıntıları vardır. Biz burada fonksiyonun tamponlamayı ilgilendiren bazı özelliklerini açıklayacağız. scanf fonksiyonu stdin dosyasından karakter karakter okuma yapar. Eğer format
+    karakterine uygun olmayan bir karakter ile karşılaşırsa onu dosyaya (tampona) geri yerleştirir ve işlemi sonlandırır. scanf normal durumda başarılı olarak yerşletirdiği parçasayısına geri dönmektedir.
+    Örneğin:
+
+	    result = scanf("%d%d", &a, &b);
+
+	Şimdi dosyada (tamponda) şu karakterler bulunyor olsun:
+
+	    123istanbul\n
+
+	scanf 123 sayısını a nesnesine yerleştirir. Ancak 'i' karakteri "%d" format karakterine uymadığı için işlemini keser. Yani b nesnesine bir yerleştirme yapmaz ve 1 değerine geri döner. Dosyadaki (tampondaki)
+    karakterler şöyle olsun:
+
+	    istanbul\n
+
+	Burada scanf hiç yerleştirme yapamayacağı için 0 ile geri dönecektir. scanf fonksiyonu baştaki boşluk karakterlerini (leading space) atmaktadır. Ancak baştaki boşluk karakterlerini atıp henüz format
+    karakterine uygun olmayan bir karakterle de karşılaşmadan dosya sonunu görürse bu durumda EOF özl değerine geri dönmektedir. Örneğin dosyanın içeriği şöyle olsun (_ karakteri SPACE karakterlerini
+    belirtmektedir):
+
+	    ___EOF
+
+	Bu durumda scanf EOF değerine geri dönecektir. Ancak örneğin:
+
+	    ___istanbulEOF
+
+	Bu durumda scanf 0 değerine geri döncektir. scanf işle birden fazla okuma yapılırken scanf baştaki ve girişler arasındaki boşluk karakterlerini atmaktadır. Örneğin:
+
+    	result = scanf("%d%d", &a, &b);
+
+	stdin dosyasında (tamponunda) şu karakterler olsun (_ karakteri SPACE karakterlerini belirtmektedir): 
+
+	    __10___20__\n
+
+	scanf burada iki yerleştirmeyi de başarılı bir biçimde yapacak ve 2 değerine geri dönecektir. scanf fonksiyonun baştaki boşluk karakterlerini (leading space)" attığına ancak sondakileri (trailing space)
+    atmadığına dikkat ediniz. Yukarıdaki okumadna sonra stdin dosyasında (tamponda) şu karakterler kalacaktır:
+
+	    __\n
+
+    Aşağıda bu fonksiyonun kullanımına ilişkin bir örnek verilmiştir.
+        * Örnek 1, scanf fonksiyonu ile menü oluştururken geçirsiz girişlerin ele alınması: 
+            #include <stdio.h>
+            #include <string.h>
+
+            void clear_stdin(void)
+            {
+                int ch;
+
+                while ((ch = getchar()) != '\n' && ch != EOF)
+                    ;
+            }
+
+            int disp_menu(void)
+            {
+                int choice;
+
+                printf("1) Kayit ekle\n");
+                printf("2) Kayit sil\n");
+                printf("3) Arama\n");
+                printf("4) Cikis\n\n");
+
+                printf("Seciminiz:");
+                fflush(stdout);
+
+                if (scanf("%d", &choice) == 0) {
+                    clear_stdin();
+                    return 0;
+                }
+
+                return choice;
+            }
+
+            int main(void)
+            {
+                int choice;
+
+                for (;;) {
+                    choice = disp_menu();
+
+                    switch (choice) {
+                        case 1:
+                            printf("kayit ekleniyor\n\n");
+                            break;
+                        case 2:
+                            printf("kayit siliniyor\n\n");
+                            break;
+                        case 3:
+                            printf("arama yapiliyor\n\n");
+                            break;
+                        case 4:
+                            goto EXIT;
+                        default:
+                            printf("gecersiz giris!..\n\n");
+                            break;
+                    }
+                }
+                
+            EXIT:
+                return 0;
+            }
+
+        * Örnek 2, scanf fonksiyonunda format karakterleri arasındaki karakterlerin girişlerde mutlaka bulundurulması gerekir. Örneğin:
+	
+	        scanf("%d/%d/%d", &day, &month, &year);
+
+        Burada her ilk iki int değerden hemen sonra bir tane '/' karakterinin kullanılması gerekir. Uygun bir giriş şöyle olabilir:
+
+            12/10/2009
+
+        '/' karakterelerinin solunda ve sağında boşluk karakterleri bulundurulamaz. Aşağıda bu kullanıma ilişkin program kodları verilmiştir:
+            #include <stdio.h>
+
+            int main(void)
+            {
+                int day, month, year;
+
+                printf("Tarihi dd/mm/yyyy biçiminde giriniz:");
+                scanf("%d/%d/%d", &day, &month, &year);
+
+                printf("%d-%d-%d\n", day, month, year);
+
+                return 0;
+            }
+
+        * Örnek 3, scanf fonksiyonunda format karakterlerindeki herhangi bir boşluk karakteri (SPACE ve \n olabilir) "boşluk karakteri görmeyene kadar stdin'den okuma yap ve onları at" anlamına gelmektedir. C'yi
+        yeni öğrenenler bu durumu bilmedikleri için scanf fonksiyonunu yanlışlıkla printf gibi kullanabilmektedir. Örneğin:
+    
+            scanf("%d%d\n", &a, &b);
+
+        Burada programcı yanlışlıkla format karakterlerinin sonuna '\n' karakterini yerleştirmiştir. (Burada '\n' yerine SPACE karakteri de yerleştirilseydi davranışta bir değişiklik olmayacaktı.) scanf fonksiyonu
+        formatlarinde bir boşluk karakteri gördüğünde "boşluk görmeyene kadar stdin dosyasından okuma" yapmaya çalışmaktadır. FDolayısıyla burada iki değer girildikten sonra csanf fonksiyonu hemen işlemini 
+        bitirmeyecektir. Örneğin:
+
+            scanf("%d / %d / %d", &day, &month, &year);
+
+        Burada artık '/' karakterlerinin solunda ve sağında boşluk karakterleri olabilmektedir. scanf fonksiyonunun baştaki boşluk karakterlerini (leading space) attığına, ancak sondakileri (trailing space)
+        atmadığına dikkat edniz. Bu durumda scanf fonksiyonundan sonra gets, getchar gibi fonksiyonları kullanmadan önce stdin tamponun boşaltılması gerekebilir.
+            #include <stdio.h>
+
+            void clear_stdin(void)
+            {
+                int ch;
+
+                while ((ch = getchar()) != '\n' && ch != EOF)
+                    ;
+            }
+
+            int main(void)
+            {
+                int a;
+                char ch;
+
+                printf("Bir sayi giriniz:");
+                fflush(stdout);
+
+                scanf("%d", &a);
+
+                clear_stdin();
+
+                printf("Bir karakter giriniz:");
+                fflush(stdout);
+
+                ch = getchar();
+
+                printf("%d %c\n", a, ch);
+
+                return 0;
+            }
+
+        * Örnek 4, Daha önceden de belirttiğimiz gibi scanf eğer baştaki bpşluk karakterlerini attıktan sonra EOF ile karşılaşırsa EOF özel değerine geri dönmektedir.
+            #include <stdio.h>
+
+            int main(void)
+            {
+                int val;
+
+                while (scanf("%d", &val) != EOF) 
+                    printf("%d\n", val);
+
+                return 0;
+            }
+
+Öte yandan POSIX veya Windows API fonksiyonları ile elde ettiğimiz dosya betimleyicisini veya o dosyaya ilişkin HANDLE değerini, tamponlu işlemler yapabilmek için direkt olarak standart C fonksiyonlarının
+çağrılmasında kullanamamaktayız. Bunun için ilgili dosya betimleyicisini veya HANDLE değerini, FILE * türünden bir betimleyiciye dönüştürmemiz gerekmektedir. İşte bunun için,
+    >> UNIX/Linux Sistemlerinde "fdopen" isimli fonksiyon kullanılır. Bu fonksiyon open ile elde ettiğimiz ilgili dosya betimleyicisini  FILE * türünden bir dosya betimleyicisine dönüştürür. Fonksiyonun prototipi
+    şöyledir:
+
+        #include <stdio.h>
+        FILE *fdopen(int fd, const char *mode);
+
+	Fonksiyonun birinci parametresi open fonksiyonundan eldee dilmş olan dosya betimleyicisini, ikinci parametresi ise dosya açış modunu belirtmektedir. Fonksiyon başarı durumunda dosya bilgi göstericisine
+    (stream), başarısızlık durumunda NULL adrese geri dönmektedir. Şüphesiz burada belirtilen açış modu ile open fonksiyonunda belirtilen açış modunun uyumlu olması gerekmektedir. Tabii bu biçimde bir dönüştürmeden
+    sonra dosya fclose ile kapatıldığında fclose zaten söz konusu betimleyici ile close fonksiyonunu çağıracaktır.
+        * Örnek 1,
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <fcntl.h>
+
+            void exit_sys(const char *msg);
+
+            int main(int argc, char *argv[])
+            {
+                int fd;
+                FILE *f;
+                int ch;
+
+                if (argc != 2)	{
+                    fprintf(stderr, "wrong number of arguments!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                if ((fd = open(argv[1], O_RDONLY)) == -1)
+                    exit_sys("open");
+                
+                if ((f = fdopen(fd, "r")) == NULL) 
+                    exit_sys("fdopen");
+
+                while ((ch = fgetc(f)) != EOF)
+                    putchar(ch);
+
+                if (ferror(f)) {
+                    fprintf(stderr, "cannot read!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                fclose(f);
+
+                return 0;
+            }
+
+            void exit_sys(const char *msg)
+            {
+                perror(msg);
+                exit(EXIT_FAILURE);
+            }
+
+    Şüphesiz bu sistemlerde fdopen fonksiyonunun tersini yapan fileno isimli bir fonksiyon da bulunmaktadır. Bu fonksiyon FILE * türünden dosya bilgi göstericisini bizden alır bize aşağı seviyeli POSIX dosya
+    fonksiyonlarında kullanılabilecek dosya betimleyicisini verir. Fonksiyonun prototipi şöyledir:
+
+        #include <stdio.h>
+        int fileno(FILE *stream);
+
+	Fonksiyon başarı durumunda dosya betimleyicisine, balarısızlık durumunda -1 değerine geri dönmektedir. errno değişkeni uygun biçimde set edilmektedir.
+        * Örnek 1, Aşağıdaki örnekte önce bir dosya fopen fonksiyonuyla açılmış sonra da fileno fonksiyonuya dosya betimleyicisi elde edilip read fonksiyonu ile dosyadna okuma yapılmıştır.
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <unistd.h>
+
+            void exit_sys(const char *msg);
+
+            int main(int argc, char *argv[])
+            {
+                int fd;
+                FILE *f;
+                char buf[30 + 1];
+                ssize_t result;
+
+                if (argc != 2)	{
+                    fprintf(stderr, "wrong number of arguments!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                if ((f = fopen(argv[1], "r")) == NULL) {
+                    fprintf(stderr, "cannot open file!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                if ((fd = fileno(f)) == -1)
+                    exit_sys("fileno");
+
+                if ((result = read(fd, buf, 30)) == -1)
+                    exit_sys("read");
+
+                buf[result] = '\0';
+                puts(buf);
+                
+                fclose(f);
+
+                return 0;
+            }
+
+            void exit_sys(const char *msg)
+            {
+                perror(msg);
+                exit(EXIT_FAILURE);
+            }
+
+    >> Windows Sistemlerinde, fdopen ve fileno fonksiyonlarının mantıksal olarak eşdeğerleri yoktur. Anımsanacağı gibi Windows'ta dosya betimleyicisi yerine HANDLE türü ile temsil edilen handle değerlei
+    kullanılıyordu. Ancak Microsoft DOS zamanlarından beri POSIX fonksiyonlarına benzer dosya fonksiyonlarını da bulundurmaktadır. Tabii bı fonksiyonlar işletim sistemi çekirdeği tarafından desteklenen
+    fonksiyonlar değildir. Bu fonksiyonlar user modda çalışan bir çeşit "sarma (wrapper)" fonksiyonlardır. Yani söz konsu bu fonksiyonlar aslında arka planda Windows'un API fonksiyonları çağrılarak
+    gerçekleştirilmiştir. Microsoft'un UNIX/Linux sistemlerindeki POSIX fonksiyonlarına benzer fonksiyonlarının prototipleri <io.h> dosyası içerisinde bulunmaktadır. Bu fonksiyonlar klasik UNIX tarzı
+    harflendirme ile isimlendirilmiştir ve bunların başlarında bir '_' karakteri bulunmaktadır. Örneğin:
+
+        _open ve _sopen_s
+        _read
+        _write
+        _close
+        _lseek
+        ...
+
+	İşte bu <io.h> içerisinde _fdopen ve _fileno fonksiyonları da bulunmaktadır. Ancak bu fonksiyonlar UNIX/Linux sistemlerindeki gibi parametrik yapıya sahiptirler.
+        * Örnek 1, Aşağıda Microsoft'a özgü "sarma <io.h> fonksiyonları" kullanılarak UNIX/Linux stili küçük bir program yazılmıştır. 
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <fcntl.h>
+            #include <io.h>
+
+            void exit_sys(const char *msg);
+
+            int main(void)
+            {
+                int fd;
+                FILE *f;
+                int ch;
+
+                if ((fd = _open("sample.c", _O_RDONLY)) == -1)
+                    exit_sys("_open");
+
+                if ((f = _fdopen(fd, "r")) == NULL)
+                    exit_sys("_fdopen");
+
+                while ((ch = fgetc(f)) != EOF)
+                    putchar(ch);
+
+                if (ferror(f)) {
+                    fprintf(stderr, "cannot read file!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                fclose(f);
+                        
+                return 0;
+            }
+
+            void exit_sys(const char *msg)
+            {
+                perror(msg);
+
+                exit(EXIT_FAILURE);
+            }
+
+Pekiyi biz sıfırdan C'nin stdio kütüphanesini yazmak istersek bunu nasıl yapabiliriz? Böyle bir standart stdio kütüphanesi yazabilmek için kabaca aşağıdaki işlemlerin yapılması gerekmektedir: 
+    
+    >> Öncelikle bir FILE yapısının oluşturulması gerekir. C standartları FILE yapısının elemanları hakkında hiçbir açıklama yapmamıştır. Dolayısıyla FILE yapısını istediğiniz gibi oluşturabilirsiniz.
+    Ana nokta bu FILE yapısının oluşturulmaıdır. Örneğin:
+
+        typedef struct {
+            ....
+        } FILE;
+
+    Pekiyi bu FILE yapısının içerisindeki elemanlar neler olmalıdır? Bu FILE yapısının elemanları tamponu yönetebilmek için gerekli bilgileri barındırmalıdır. Kabaca bu yapıda tutulması gereken elemanlar
+    şunlardır:
+    
+        -> Aşağı seviyeli dosya işlemlerinde kullanılacak işletim sistemine özgü handle değeri (yani UNIX/Linux sistemleri için dosya betimleyicisi, 
+        Windows sistemleri için HANDLE değeri).
+        -> Dosyanın açış modu
+        -> Tamponun yeri ve uzunluğu
+        -> Tamponun aktif noktası (yani dosya işlemi yapıldığında tamponun neresinden işlem yapılacaktır)
+        -> Tamponun kirli (dirty) olup olmadığı bilgisi
+        -> Asıl dosyanın neresinin tamponda olduğu bilgisi
+        -> Son işlem EOF yüzünden başarısızsa bu bilgi FILE yapısının içerisindeki bir bayrakta tutulmalıdır. Benzer biçimde son yapılan IO işlemi başarısızsa bu da bir bayrakla tutulmalıdır. feof ve ferror
+        fonksiyonları bu bayraklarla geri dönebilir. 
+        -> Diğer bilgiler
+
+    >> fopen fonksiyonu yazılırken önce FILE yapısı ve tampon tahsis edilmeli sonra dosya işletim sisteminni aşağı seviyeli fonksiyonlarıyla açılmalıdır. Örneğin:
+
+        FILE *fopen(const char *path, const char *mode)
+        {
+            1) mode parametresi parse edilmeli
+            2) FILE yapısı tahsis edilmeli
+            3) Tampon tahsis edilip bilgileri FILE yapısının içerisinde saklanmalı
+            4) Diğer işlemler
+            5) FILE yapısının adresi ile geri dönülmeli. 
+        }
+
+    >> ...
+    
+C'nin Stdio ktüphenesinin yazımı için bir ipucu:
+    * Örnek 1, Tam bitilmiş bir kod değil: 
+        /* csd_stdio.h */
+            #ifndef CSD_STDIO_H_
+            #define CSD_STDIO_H_
+
+            #define CSD_EOF         -1
+            #define CSD_BUFSIZ      5
+
+            #include <sys/types.h>
+
+            typedef struct {
+                int fd;
+                unsigned char *beg;    /* starting buffer address */
+                size_t size;   		  /* buffer size */
+                size_t count; 		  /* number of bytes in the buffer */
+                unsigned char *pos;    /* current buffer address */
+                off_t offset;  		  /* file offset */
+                int dirty;
+                int error;
+                int eof;
+                /* .... */
+            } CSD_FILE;
+
+            CSD_FILE *csd_fopen(const char *path, const char *mode);
+            int csd_fgetc(CSD_FILE *f);
+
+            #endif
+
+        /* csd_stdio.c */
+            #include <stdlib.h>
+            #include <string.h>
+            #include <fcntl.h>
+            #include <unistd.h>
+            #include "csd_stdio.h"
+
+            static ssize_t refresh_buffer(CSD_FILE *f);
+
+            CSD_FILE *csd_fopen(const char *path, const char *mode)
+            {
+                CSD_FILE *f;
+                int i;
+                static char *modes[] = { "r", "r+", "w", "w+", "a", "a+", "rb", "r+b", "wb", "w+b", "ab", "a+b", NULL };
+                static int flags[] = { O_RDONLY, O_RDWR, O_WRONLY | O_CREAT | O_TRUNC, O_RDWR | O_CREAT | O_TRUNC, O_WRONLY | O_CREAT | O_APPEND,
+                    O_WRONLY | O_CREAT | O_APPEND, O_WRONLY | O_CREAT | O_APPEND };
+
+                if ((f = (CSD_FILE *)malloc(sizeof(CSD_FILE))) == NULL)
+                    return NULL;
+
+                for (i = 0; modes[i] != NULL; ++i)
+                    if (!strcmp(mode, modes[i]))
+                        break;
+
+                if (modes[i] == NULL) {
+                    free(f);
+                    return NULL;
+                }
+
+                if ((f->fd = open(path, flags[i % 6], S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1) {
+                    free(f);
+                    return NULL;
+                }
+
+                if ((f->beg = (unsigned char *)malloc(CSD_BUFSIZ)) == NULL) {
+                    free(f);
+                    return NULL;
+                }
+
+                f->size = CSD_BUFSIZ;
+                f->count = 0;
+                f->pos = NULL;
+                f->offset = 0;
+                f->dirty = 0;
+                f->error = 0;
+
+                return f;
+            }
+
+            static ssize_t refresh_buffer(CSD_FILE *f)
+            {
+                ssize_t result;
+
+                if (f->dirty) {
+                    if (lseek(f->fd, f->offset, SEEK_SET) == -1)
+                        return -1;
+                    if (write(f->fd, f->beg, f->pos - f->beg) == -1)
+                        return -1;
+                }
+
+                if (lseek(f->fd, f->offset + f->count, SEEK_SET) == -1)
+                    return -1;
+
+                if ((result = read(f->fd, f->beg, f->size)) == -1)
+                    return -1;
+
+                f->pos = f->beg;
+                f->offset = f->offset + f->count;
+                f->count = result;
+
+                return result;
+            }
+
+            int csd_fgetc(CSD_FILE *f)
+            {
+                ssize_t result;
+
+                if (f->pos == NULL || f->pos == f->beg + f->count) {
+                    if ((result = refresh_buffer(f)) == -1) {
+                        f->error = 1;
+                        return CSD_EOF;
+                    }
+
+                    if (result == 0) {
+                        f->eof = 1;
+                        return CSD_EOF;
+                    }
+                }
+
+                return *f->pos++;
+            }
+
+            int csd_ferror(CSD_FILE *f)
+            {
+                return f->error;
+            }
+
+        /* sample.c */
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <unistd.h>
+            #include "csd_stdio.h"
+
+            void exit_sys(const char *msg);
+
+            int main(void)
+            {
+                CSD_FILE *f;
+                int ch;
+
+                if ((f = csd_fopen("test.txt", "r")) == NULL) {
+                    fprintf(stderr, "cannot open file!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                ch = csd_fgetc(f);
+                putchar(ch);
+
+                while ((ch = csd_fgetc(f)) != CSD_EOF)
+                    putchar(ch);
+
+                return 0;
+            }
+
+            void exit_sys(const char *msg)
+            {
+                perror(msg);
+
+                exit(EXIT_FAILURE);
+            }
+

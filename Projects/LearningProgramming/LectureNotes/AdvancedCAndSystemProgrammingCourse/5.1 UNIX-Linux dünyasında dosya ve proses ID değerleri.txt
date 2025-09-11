@@ -1,0 +1,256 @@
+> UNIX/Linux dünyasında dosya ve proseslere ilişkin ID kavramı: 
+    >> Proseslere İlişkin ID Kavramı: UNIX/Linux sistemlerinde bri kullanıcının sisteme girebilmesi için bir kullanıcı ismi ve bir de parolasının
+    olması gerekir. Bu sistemlerde	proseslere ilişkin "proses kontrol bloğunda turulan" şu önemli erişim bilgileri vardrı:
+
+        -> Gerçek Kullanıcı Id'si (Real User Id)
+        -> Gerçek Grup Id'si (Real Group Id)
+        -> Etkin Kullanıcı Id'si (Effective User Id)
+        -> Etkin Grup Id'si (Effective Group Id)
+
+    Varsayılan durumda prosesin gerçek kullanıcı id'si ile etkin kullanıcı id'si, gerçek grup id'si ile etkin grup id'si aynıdır. Test işlemlerine
+    her zaman etkin kullanıcı id'si ve etkin grup id'si sokulmaktadır. Pekiyi prosesin kullanıcı ve grup id'leri nasıl belirlenmektedir? İşte bize
+    sisteme sokan yani bize kullanıcı ismini ve parolayı sorun aslında "login" isimli programdır. Bu program girdiğimiz kullanıcı ve parola doğruysa
+    "/etc/passwd" dosyasında yazan kullanıcı id'si ve grup id'si ile yine burada belirtilen programı çalıştırmaktadır. Bu program da çoğu kez kabuk
+    programı olmaktadır. Dolayısıyla biz sisteme "login" olduğumuzda aslında bizin gerçek ve etkin id'lerimiz "/etc/passwd" dsoyasında yazan
+    değerlerle "set" edilmiş olmaktadır. Bu id'ler üst prosesten alt prosese aktarılırlar. Yani biz kabuktan bir program çalıştırdığımızda kabuğun
+    gerçek ve etkin id'leri bizim programımıza yani prosesimize aktarılmaktadır. 
+        >>> "/etc/passwd" dosyası satırlardan oluşmaktadır. Her satır bir kullanıcıya ilişkindir ve ':' karakterleriyle 7 alana ayrılmıştır.
+        Örneğin,
+        
+            student:x:1001:1001:Student,,,:/home/student:/bin/bash
+
+        Bu satırdaki,
+            
+            -> İlk alan kullanıcı ismini belirtir. Burada kullanıcı ismi "student" biçimindedir.
+            -> İkinci alan kullanıcı şifresine ilişkindir. Burada 'x' varsa bu şifre bilgisinin "/etc/shadow" dosyası içerisinde olduğunu
+            belirtir. Şifre doğrudan bu alanda da tutulabilmektedir. Ancak bu alanda şifre "şifrelenmiş bir biçimde" tutulmaktadır.
+            -> Üçüncü alanda kullanıya ilişkin "gerçek kullanıcı id'si (real user id)" bulunmaktadır. "login" programı prosesin etkin
+            kullanıcı id'sini ve gerçek kullanıcı id'sini burada belirtilen biçimde set etmektedir. 
+            -> Dördüncü alanda kullanıcının ilişkin olduğu gerçek grup id'si "(real group id)" tutulmaktadır. "login" programı prosesin
+            gerçek grup id'si ve etkin grup id'sini bu değer olarak "set" etmektedir.
+            -> Beşinci alanda kullanıcıya ilişkin bazı bilgiler bulunmaktadır. Ancak bu bilgiler sistemin işleyişi ile ilgili değildir.
+            -> Altıncı alanda kullanıya prosesin "çalışma dizini (current working directory)" tutulmaktadır.
+            -> Yedinci alanda login başarılıyken çalıştırılacak prgram bulunur. Buradaki "bash (Bourne Again Shell)" programı en çok
+            kullanılan kabuk programıdır. 
+
+    >> Dosyalara İlişkin ID Kavramı: UNIX/Linux sistemlerinde aynı zamanda her dosyanın ve dizin'in de bir "kullanıcı id'si (user id)" ve
+    "grup id'si (group id)" vardır. Ancak dosyalar söz konusu olduğunda "gerçek" ve "etkin" kavramları söz konusu değildir. Yani dosyaların
+    gerçek ve etkin biçiminde iki id'si yoktur. Tek bir id'si vardır. Bir dosyanın kullanıcı ve grup id'leri "ls -l" komutuyla görüntülenebilir.
+    Örneğin:
+
+        kaan@kaan-virtual-machine:~/Study/SysProg$ ls -l
+        toplam 76
+        -rwxr-xr-x 1 kaan study   16136 Haz 17 18:51 a.out
+        -rw-r--r-- 1 kaan study    3570 Haz 18 18:57 disp.c
+        -rw-r--r-- 1 kaan study    1622 Haz 11 20:40 mample.c
+        ......
+
+    Aslında dosya sisteminde dosyaların kullanıcı id'leri ve grup id'leri sayısal biçimde tutulmaktadır. Ancal "ls" programı "/etc/passwd" ve
+    "/etc/group" dosyalarına başvurarak onların isimlerini yazdırmaktadır. UNIX/Linux sistemlerinde her dosyanın "erişim hakları" vardır. Bu
+    erişim hakları "ls -l" komutunda 10 tane karakterden oluşan bir sütunda görüntülenmektedir. Örneğin:
+
+	    -rw-r--r-- 1 kaan study    3570 Haz 18 18:57 disp.c
+
+	Buradaki karakterlerin en solundaki karakter dosyanın türünü belirtmektedir. Dosya türü olarak '-' "sıradan bir disk dosyası (regular file)"
+    anlamına gelmektedir. Budada 'd' varsa bu dosyanın bir "dizin (directory)" olduğu anlamına gelir. Başka dosya türleri de vardır. Dosya
+    türünden sonraki karakterler üçlü üç grup oluşturmaktadır:
+
+	    - rwx rwx rwx
+
+	İlk üçlü gruba "owner", sonraki üçlü gruba "group" ve sonraki üçlü gruba "other" denilmektedir. Bu gruplar dosyanın sahibinin, dosya ile aynı
+    grupta olanların ve herhangi kişilerin bu dosya üzerinde ne yapabileceklerini belirtir. Eğer burada bir hak varsa biz ilgili pozisyonda "r",
+    "w" ya da "x" harflerini görürüz. Eğer burada bir hak yoksa biz ilgili pozisyonda "-" karakterini görürüz. Örneğin bir dosyanın erişim
+    hakları şöyle olsun:
+
+	    -rw-r-----
+
+	Bu dosyaya dosyanın sahibi "(owner)" okuma ve yazma yapabilir. Dosyanın grubuyla aynı gruptan olan kişiler bu dosyadan yalnızca okuma
+    yapabilirler. Herhangi kişiler bu dosya üzerinde işlem yapamazlar. Bir dosyanın erişim haklarındaki 'x' kısmında '-' var ise bu durum ya
+    "dosyanın zaten çalıştırılabili bir dosya olmadığı" ya da "ilgili kişi çalıştırma hakkı verilmediği" anlamına gelmektedir. 
+        >>> Dosya erişim hakları "open" fonksiyonu tarafından kontrol edilmektedir. Kontrol işlemi sırasıyla şöyle yapılmaktadır:
+
+            -> "open" fonksiyonu önce prosesin etkin kullanıcı id'sine bakar. Eğer prosesin etkin kullanıcı id'si 0 ise bu durumda bir kontrol
+            yapılmaz. İstek kabul edilir. Etkin kullanıcı id'si 0 olan proseslere "root process" ay da "super user process" denilmektedir. 
+
+            -> "open" fonksiyonu prosesin etkin kullanıcı id'si ile dosyanın kullanıcı id'sine bakar. Eğer bunlar aynıysa dosyanın sahibi ilgili
+            prosese ilişkin kullanıcıdır. Bu durumda erişim haklarındaki "owner" kısmı dikkate alınarak erişim onayı verilir. 
+
+            -> "open" fonksiyonu prosesin etkin grup id'si ile dosyanın grup id'sine bakar. Eğer bunlar aynıysa proses dosyanın grubuyla aynı
+            grupta olan bir kullanıcıya ilişkindir. Bu durumda erişim haklarının "group" kısmı dikkate alınarak erişim onayı verilir. 
+
+            -> open fonksiyonu dosyanın erişim haklarının "other" kısmına bakarak erişim onayı verir.
+                * Örnek 1.0, bir prosesin etkin kullanıcı id'si "kaan" (1000) ve etkin grup id'si, "study" (1002) olsun ve aşağıdaki gibi bir
+                dosyanın bulunduğu varsayalım:
+
+                    -rw-r--r-- 1 ali study    3570 Haz 18 18:57 test.txt
+
+                Bu proses dosyayı "open" fonksiyonula şöyle açmaya çalışmış olsun:
+
+                    "fd = open("test.txt", O_RDWR);"
+
+                Burada "open" fonksiyonu başarısız olacaktır. "open" fonksiyonunu çağıran prosesin etkin kullanıcı id'si "0" değildir. Prosesin
+                etkin kullanıcı id'si dosyanın kullanıcı id'si ile de aynı değildir. Ancak prosesin etkin grup id'si dosyanın grup id'si ile
+                aynıdır. Bu durumda erişim haklarının "group" kısmı dikkate alınır. Erişim haklarının group kısmında "r--" vardır. Halbuki proses
+                dosyaysı "O_RDWR" modunda açmak istemiştir. O halde "open" başarısız olur ve "errno" "EPERM" değeri ile "set" edilir. Tabii aynı
+                proses dosyayı şöyle açabilirdi:
+
+                    "fd = open("test.txt", O_RDONLY);"
+
+                * Örnek 1.1, Şimdi aynı dosyaya etkin kullanıcı id'si "veli (1005)" olan etkin group id'si de "school (1004)" olan bir proses
+                aşağıdaki gibi "open" uygulamış olsun:
+
+                    "fd = open("test.txt", O_RDONLY);"
+
+                Burada prosess dosyaya göre "other" durumundadır. O zaman erişimde "other" kısım dikkate alınacaktır. Dosyanın "other" erişim
+                hakları "r--" biçimindedir. Bu durumda "open" başarılı olarak dosyayı açar. 
+
+                * Örnek 2, Diğer bir dosyanın erişim hakları şöyle olsun
+
+                    ---------- 1 ali study    3570 Haz 18 18:57 x.txt
+
+                Bu dosyayı etkin kullanıcı id'si 0 olan bir proses aşağıdaki gibi open fonksiyonuyla açmak istesin:
+
+                    "fd = open("x.txt", O_RDWR);"
+
+                Etkin kullanıcı id'si 0 olan proseslere hiçbir kontrol uygulanmadığı için open başarılı olacaktır.
+
+        Bir kullanıcının dosyasına aşağıdaki gibi bir erişim hakkı vermesi geçerli olsa da tuhaftır:
+
+            "-r--rw-rw-"
+
+        Burada dosyanın sahibi bu dosyaya yazma yapamayacaktır. Ancak dosyayla aynı gruptaki prosesler ve herhangi prosesler dosyaya yazma 
+        yapabilecektir. Bir programı sudo yaparak çalıştırdığımızda aslıdna program etkin kullanıcı id'si 0 olacak biçimde çalıştırılmaktadır.
+        Dolayısıyla biz yetkisizlikten bir şeyi yapamıyorsak "sudo" ile bunu yapmaya çalışabiliriz. Tabii modern UNIX/Linux sistemlerinde her
+        kullanıcı "sudo" yapamamaktadır. Ayrıca "sudo" yapabilmek için kurulum sırasındaki "root parolasının" kullanıcı tarafından biliniyor
+        olması gerekmektedir. UNIX/Linux sistemlerindeki güvenlik mekanizması "ya hep ya hiç" esasıyla tasarlanmıştır. Eğer proses "root"
+        proses ise (yani prosesin etkin kullanıcı id'si 0 ise) proses her şeyi yapabilmektedir. Ancak proses "root" prosesi değilse (yani 
+        prosesin etkin kullanıcı id'si 0 değilse) proses yalnızca kendisiyle ilgili şeyleri yapabilmektedir. İşte bu "yap hep ya hiç" sistemi
+        bazı UNIX türevi sistemlerde çeşitli biçimlerde geliştirilmek istenmiştir. Örneğin, Linux sistemleri "capability" denilen bir özelliğe
+        sahiptir. Linux sistemlerinde bir proses "root" olmadığı halde bazı "capability" özelliklerine sahip olabilir. Bu durumda o konuya
+        ilişkin işlemleri sanki "root" prosesmiş gibi yapabilir. Linux sistemlerinde bu biçimde çeşitli konulara ilişkin "capablity" ler
+        oluşturulmuştur. Bazı sistemler, (Linux'ta isteğe bağlı) "ACL (access Contol List)" denilen bir mekanizmaya da sahiptir. POSIX
+        standartları "capability" ya da "ACL" konularını kapsamamaktadır. Ancak POSIX standartları UNIX türevi işletim sistemlerinin bu
+        tür özelliklere sahip olabileceği fikriyle tasarlanmıştır. Bu nedenle POSIX standartlarında "root önceliği" ya da "etkin kullanıcı
+        id'nin 0 olması" gibi ifadeler yerine "uygun öncelik (appropriate privilege)" terimi kullanılmaktadır. POSIX'in "uygun öncelik" terimi
+        Linux için "ya prosesin etkin kullanıcı id'sinin 0 olması ya da prosesin o işlemi yapabilecek capability'ye sahip olması" anlamına
+        gelmektedir. Biz de kursa notlarımızda "root önceliği ya da etkin kullanıcı id'sinin 0 olması" yerine "prosesin uygun önceliğe sahip
+        olması" terimini kullanacağız. 
+
+        >>> Pekiyi UNIX/Linux sistemlerinde bir dosyanın kullanıcı ve grup id'leri nasıl "set" edilmektedir? İşte dosyanın kullanıcı ve grup
+        id'leri bu dosya ilk kez yaratılırken belirlenmektedir. Dosyanın kullanıcı id'si her zaman onu yaratan prosesin etkin kullanıcı id'si
+        olarak "set" edilmektedir. Ancak yeni yaratılan dosyanın grup id'sinin "set" edilmesi konusunda sistemlerde bir anlaşmazlık olmuştur.
+        Bu nedenle POSIX standartları oluşturulurken o anki mevcut sistemler için ikili semantik benimsenmiştir. Şöyle ki "yeni yaratılan
+        dosyanın grup id'si ya onu yaratan prosesin etkin grup id'si olarak (System 5 semantiği) ya da o dosyanın içinde bulunduğu dizin'in
+        grup id'si olarak (BSD semantiği) set edilmektedir. Linux default durumda yeni yaratılan dosyanın grup id'sini onu yaratan prosesin
+        etkin grup id'si olarak set etmektedir. Pekiyi dosyanın erişim hakları nasıl belirlenmektedir? İşte dosyalar her zaman open fonksiyonuyla
+        yaratılır. "open" fonksiyonunda fonksiyonun üçüncü parametresi erişim haklarını belirtmektedir. Daha önceden de belirttiğimiz gibi eğer
+        "open" fonksiyonun ikinci parametresinde "O_CREAT" bayrağı kullanılmışsa dosyanın yaratılması söz konusu olabilmektedir. Bu durumda
+        programcı üçüncü parametreyi erişim hakları olacak biçimde oluşturmalıdır. Erişim hakları UNIX/Linux sistemlerinde genel olarak "mode_t"
+        türü ile temsil edilmektedir. Bu tür "<sys/stat.h>" ve "<sys/types.h>" dosyası içerisinde bir tamsayı türünden olacak biçimde "typedef"
+        edilmiştir. "open" fonksiyonunda erişim haklarını oluşturmak için <sys/stat.h> içerisinde bulunan "S_IXXX" biçimindeki sembolik sabitler
+        bit OR işlemine sokulmaktadır. Bu sembolik sabitlerin listesi şöyledir:
+
+            S_IRUSR
+            S_IWUSR
+            S_IXUSR
+
+            S_IRGRP
+            S_IWGRP
+            S_IXGRP
+
+            S_IROTH
+            S_IWOTH
+            S_IXOTH
+
+        Buradaki sembolik sabitlerin hepsi "S_I" öneki ile başlatılmıştır. Bunu "R", "W" ya da "X" harfleri izler. Bu harfleri de "USR", "GRP"
+        ya da "OTH" harfleri izlemektedir. Örneğin,
+            
+            "S_IRUSR|S_IWUSR|S_IRGRP|_SIROTH"
+            
+        hakları "rw-r--r--" anlamına gelmektedir. Yukarıda sembolik sabitlerin sayısal değerleri POSIX 2008'e kadar sşstemdne sisteme değişebilir
+        biçimdeydi. Ancak daha sonra POSIX standartları bu sembolik sabitlerin değerlerini tamamen bir tamsayının düşük anlamlı 9 biti olarak
+        belirlemiştir. Aşağıda bir tamsayının 9 bitine karşılık gelen erişim hakları verilmiştir:
+
+            "rwx rwx rwx"
+
+        Bir octal digit "3-bit" ile açıldığına göre POSIX 2008 ve sonrasında artık bu erişim hakları octal bir sayı biçiminde kolay bir şekilde
+        girilebilmektedir. Örneğin "0644" octal sayısı ikilik sistemde "110 100 100" biçimindedir. Bu da "rw-r--r--" anlamına gelmektedir. Başka bir
+        deyişle "S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH" işleminin eşdeğeri "0644" tür. Ancak eski sistemler bu sembolik sabitleri bu biçimde define etmemiş
+        olabilirler. Dolayısıyla erişim hakları için doğrudan bir syaı girmek yerine "S_IXXX" sembolik sabitlerini kullanmak daha uygun olabilir.
+        Ayrıca "<sys/stat.h>" dosyası içerisinde aşağıdaki gibi üç sembolik sabit daha vardır:
+
+            #define S_IRWXU		(S_IRUSR|S_IWUSR|S_IXUSR)
+            #define S_IRWXG		(S_IRGRP|S_IWGRP|S_IXGRP)
+            #define S_IRWXO		(S_IROTH|S_IWOTH|S_IXOTH)
+
+        Bu durumda tüm erişim haklarını vermek için "S_IRWXU|S_IRWXG|S_IRWXO" işlemi yapılabilir. Bu zaten "0777" ile aynı anlamdadır. Aşağıda "open"
+        fonksiyonu ile dosya yaratmaya bir örnek verilmiştir:
+
+            int fd;
+            ...
+
+            if ((fd = open("y.txt", O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) == -1)
+                exit_sys("open");
+
+        Burada bir noktaya yeniden dikkatinizi çekmek istiyoruz: "open" fonksiyonun ikinci parametresinde "O_CREAT" bayrağının kullanılm olması üçüncü
+        parametrenin fonksiyon tarafından kesinlikle kullanılacağı anlamına gelmemektedir. Eğer dosya yoksa dosya yaratılırken bu üçüncü parametre
+        kullanılmaktadır. "open" fonksiyonun üçüncü parametresi eğer dosya yaratılacaksa ikinci parametresi üzerinde etkili olmamaktadır. Örneğin:
+
+            fd = open("z.tzt", O_RDWR|O_CREAT, 0);
+
+        Burada dosyanın yaratılacağını varsayalım. Dosyayı yaratan kendine "read" ve "write" hakkı da vermemiştir. Ancak "open" fonksiyonu bu
+        yaratımda başarılı olacaktır. Tabii bundan sonra artık dosyanın sahibi "open" fonksiyonu ile dosyayı herhangi bir modda açamayacaktır.
+        Aslında "open" fonksiyonunda üçüncü parametrede verilen erişim hakları nihai erişim hakları değildir. Bu erişim hakları "prosesin umask
+        değeri" denilen bir değerle işleme sokulur. Nihai erişim hakları bu işlem sonucunda belirlenir. Prosesin "umask" değerinde belirtilen
+        haklar "open" fonksiyonunda girilse bile dosyaya verilmemektedir. Prosesin "umask" değeri üst prosesten alt prosese aktarılmaktadır.
+        Kabuk programının "(bash)" "umask" değeri "umask" isimli komutla elde edilebilir. Örneğin:
+
+            $umask
+            0022
+
+        Buradaki "umask" değeri "octal" değer olarak görüntülenmektedir. Yukarıdaki "octal" değerini "binary" açılımı şöyledir:
+
+            000 010 010
+
+        Burada gruba "write" hakkı ve "other" a "write" hakkı ortadan kaldırılmıştır. Başka bir deyişle open fonksiyonuna girdiğimiz erişim
+        hakları mode olmak üzere nihai erişim hakları "mode & ~umask" biçimindedir. Yani "umask" değerindeki 1 olan bitlere karşı gelen haklar
+        aslında silinmektedir. Kabuk programının umask değeri de değiştirilebilir. Bu durumda kabuktan çalıştırdığımız programların da umask
+        değeri değişecektir. Örneğin:
+
+            $umask 0
+            $umask 
+            0000
+
+        Bir proses kendi umask değerini istediği zaman "umask" isimli POSIX fonksiyonu ile değiştirebilir. Bunun için bir koşul gerekmemektedir.
+            >>>> "umask" fonksiyonu: Fonksiyonun prototipi şöyledir:
+
+                #include <sys/stat.h>
+                mode_t umask(mode_t cmask);
+
+            Fonksiyon yeni "umask" değerini parametre olarak alır ve eski umask değerini verir. Parametre için argümanı POSIX 2008 ve sonrasında
+            sayısal biçimde verebiliriz. Ancak "S_IXXX" sembolik sabitleriyle vermek iyi bir tekniktir. Fonksiyon başarısız olamamaktadır. O
+            halde biz "open" fonksiyonunda verdiğimiz erişim haklarının aynısının dosyaya yansıtılmasını istiyorsak programın başında prosesin
+            "umask" değerini 0'a çekebiliriz. Örneğin:
+
+                int fd;
+                ...
+                umask(0);
+                
+                if ((fd = open("z.txt", O_WRONLY|O_CREAT, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)) == -1)  
+                    exit_sys("open");
+
+        Prosesin "umask" değerini alan arı bir fonksiyon yoktur. O zaman mecburen prosesin umask değerini almak için onu set ediyormuş gibi
+        yapmak gerekir. Örneğin:
+
+            mode_t mode;
+            ...
+            mode = umask(0);
+            umask(mode);
+
+        Pekiyi prosesler için "umask" değerine nedne gereksinim duyulmuştur? Bunun birkaç nedeni vardır. Birincisi "umask" dikkatsizlikle
+        verilen erişimlerin ortadan otomatik biçimde kaldırılmasını sağlamaktadır. "umask" değeri aynı zamanda başka programlarda "default"
+        erişim haklarını ayarlamak için de kullanılmaktadır. Örneğin biz bir C kütüphanesi yazacak olalım. fopen fonksiyonunda dosya yaratırken
+        erişim haklarını nasıl vermeliyiz? İşte UNIX/Linux sistemleri için standart C kütüphanesini yazanlar genellikle "default" erişim haklarını
+        "rw-rw-rw" biçiminde vermektedirler. Fakat bu işlem prosesin umask değerinden etkileneceği için biz programı çalıştırmadan önce ya da
+        programın içerisinde umask değerini değiştirerek bunu dışarıdan değiştirmiş gibi oluruz. Başka bir deyişle prosesin umask değeri başkaları
+        tarafından yazılmış olan kodlarda yaratılan dosyalara ilişkin erişim haklarını değiştirmekte kullanılabilmektedir. 

@@ -1,0 +1,1216 @@
+> İşletim Sistemlerinin Yardımcı Dosya Sistemleri: Bu yardımcı dosya sistemleri aşağıdaki fonksiyonlar çağrılarak kurulmuştur:
+
+    İşlevi                                  Windows API     -   POSIX
+    Dosya Silmek                            DeleteFile      -   unlink
+    Dosya Taşımak                           MoveFile        -   ???
+    Dosya Uzunluk Bilgisi                   GetFileSize     -   ???
+    Dizin Oluşturmak                        CreateDirectory -   mkdir
+    Dizin Silmek                            RemoveDirectory -   rmdir
+    Dosyanın Erişim Haklarının Değişim      ???             -   chmod
+    Dosyaya İlişkin Bilgiler                ???             -   stat, lstat ve fstat
+
+Bu fonksiyonlardan,
+    >> Windows API Fonksiyonları: Windows API fonksiyonlarının büyük bölümü çok eskiden tasarlanmıştır. Zamanla yeni birtakım özelliklerin de bazen etkisiyle bu fonksiyonlarda genişletme (yani işlevlerini
+    gemişletme) yapma gereksinimi ortaya çıkmıştır. Bu durumda Microsoft eski fonksiyony bulunurmaya devam ederek onun daha gelişmiş yeni bir versiyonunu da oluşturmuştur. Genel olarak Micrsoft bir fonksiyonun
+    genişletilmiş yeni versyionunu Ex sonekiyle isimlendirmektedir. Örneğin LockFile fonksiyonunun yeni genişletilmiş ismi LockFileEx biçimindedir. APı fonksiyonlarının Ex'li versiyonları nıormal versiyonlarını
+    da kapsar niteliktedir. Ancak genel olarak Ex'li versiyonların daha fazla parametreye sahip olma eğilimi vardır. Eğer sizin bu Ex'li versiyonşları kullanmak için nedeniniz yoksa bunların Ex'siz normal
+    versiyonlarını kullanabilirsiniz. API fonksiyonlarının Ex'li versyonları oluşturulduğunda genel olarak Ex'siz versiyonları "deprecated" yapılmamaktadır. Bir fonksiyonun "deprecated" yapılması "şimdilik muhafa
+    edildiği ancak gelecekte kaldırılabileceği dolayıyla da artık bu fonksiyonu kullanmak isteyenlerin bu fonksiyonu kullanmamaları gerektiği" anlamına gelmektedir. Tabii bir fonksiyon "deprecated" yapılmışsa onun
+    yerini tutan başka bir fonksiyon da bulunuyor durumdadır. Dokğmanlar "deprecated" olan fonksiyon yerine hangi fonksiyonun tercih edilmesi gerektiğini de belirtmektedir. "Deprecated" sözcüğü yalnızca Windows API
+    fonksiyonlarında değil aynı zamanda C standartlarında da kullanılan bir sözcüktür. Şimdi de tablodaki fonksiyonları incelemeye başlayalım:  
+        >>> "DeleteFile" : Windows sistemlerinde dosya silmek için DeleteFile isimli API fonksiyonu kullanılmaktadır. Fonksiyonun prototipi şöyledir:
+
+            BOOL DeleteFile(
+                LPCTSTR lpFileName
+            );
+
+        Fonksiyon silinecek dosyanın yol ifadesini parametre olarak alır. Başarı durumunda sıfır dışı bir değere başarıszlık durumunda 0 değerine geri döner. Bir dosya çeşitli nedenlereden dolayı silinemeyebilir.
+        Bu nedenle fonksiyonun başarsı kontrol edilmeli ve başarısızlık durumunda uygun hata mesajı verilmelidir. Örneğin:
+
+            if (!DeleteFile("test.txt"))
+                ExitSys("DeleteFile");
+
+        Windows'ta bir dosya açıkken dosyayı silebilir miyiz? Windows'ta bu durum dosyanın nasıl açıldığına göre değişebilmektedir. Eğer bir dosya CreateFile fonksiyonu ile açılırken fonksiyonun üçüncü
+        parametresinde FILE_SHARE_DELETE bayrağı eklenmezse bu durumda dosya açıkken başka bir proses dosyayı silemez. Dolayısıyla DeleteFile başarısız olur. Ancak CreateFile fonksiyonunun üçüncü parametresine
+        FILE_SHARE_DELETE baytrağı eklenirse bu durumda başka bir proses artık dosyayı silebilir. Tabii bu durumda dosya dizin girişinden silinir. Ancak dosya açmış olan prosesler dosyayı kullanmaya devam ederler.
+        Dosya kullanan son proses de dosyayı kapattığı zaman dosya gerçek anlamda silinecektir. 
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    if (!DeleteFile("test.txt"))
+                        ExitSys("DeleteFile");
+
+                    printf("File successfully deleted...\n");
+
+                    return 0;
+                }
+
+                void ExitSys(LPCSTR lpszMsg)
+                {
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr;
+
+                    if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                        fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "MoveFile" : Bir dosyanın Windows'ta "taşınması (move edilmesi)" nasıl yapılmaktadır? Örneğin Windows'ta elimizde "c:\Study" dizini içerisinde "test.txt" isimli bir dosya bulunuyor olsun. Biz de bu
+        dosyayı "c:\temp" dizinine taşımak isteyelim. Normal olarak biz dosyaalara "dizin girişleri (directory enty)" yoluyla erişiriz. Dosyaların gerçek verileri (yani dosyaların içindeki bilgiler) diskte başka
+        bir yerdedir. Dizin girişleri aslında dosyanın içindeki bilgilerin bulunduğu disk alanına referans eden bilgileri içermektedir. Dolayısıyla bir dosyanın taşınması sırasında aslında dosyanın içerisindeki
+        bilgilerde genellikle bir taşıma yapılmamaktadır. Yalnızca eski dizin girişi silinip yeni dizin girişi aynı dosyanın diskteki bilgilerine referans edecek biçimde oluşturulmaktadır. Yani biz "C:\Study"
+        dizininin içerisindeki "test.txt" dosyasını "C:\temp" dizinine taşırken aslında dosyanın içerisindeki bilgileri diskte bir yerden bir yere taşımamaktayız. Bu durumda işletim sistemi aslında "C:\Study"
+        dizinindeki "test.txt" dizin girişini siler, "C:\Sample" dizininde aynı dosyanın bilgilerine referans eden yeni bir "test.txt" dizin girişi oluşturur. Bu işlem dosyanın içindeki bilgileri taşımaktan çok
+        daha hızlı yapılabilen bir işlemdir. Bu durumda işletim sistemlerinde "isim değiştirme (rename)" "taşıma (move)" aslında aynı anlama gelmektedir. Yani biz bir dosyanın ismini değiştirdiğimizde aslında
+        sanki onu aynı dizin içerisine başka bir isimle taşıyor gibi olmaktayız. Tabii bazen işletim sistemi gerçekten dosyanın içerisindeki bilgileri de taşımak zorunda kalabilmektedir. Örneğin Windows'ta iki
+        hard diskimiz olsun. Biz diskteki dosyayı diğer diske taşırken mecburen işletim sistemi dosya içeriğini de fiziksel olarak taşıyacaktır. Windows sistemlerinde dosya taşımak için (ve tabii dosyanın ismini
+        değiştirmek için) MoveFile isimli API fonksiyonu kullanılmaktadır. Fonksiyonun prototipi şöyledir:
+
+            BOOL MoveFile(
+                LPCTSTR lpExistingFileName,
+                LPCTSTR lpNewFileName
+            );
+
+        Fonksiyonun birinciparametresi kaynak yol ifadesini ikinci parametresi hedef yol ifadesini almaktadır. Fonksiyonun geri dönüş değeri işlemin başarısını belirtmektedir. Dosyanın taşınması aslında dosyanın
+        aynı zamanda silinmesi gibi bir etki de yaratmaktadır. Dolayısıyla bir proses dosyayı FILE_SHARE_DELETE bayrağını kullanmadan açmışsa başka bir proses dosyayı MoveFile ile taşıyamaz. Aşağıdaki örnekte
+        prosesin çalışma dizinindeki "test.txt" dosyasının ismi "mest.txt" olarak değiştirilmektedir. 
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    if (!MoveFile("test.txt", "mest.txt"))
+                        ExitSys("MoveFile");
+
+                    printf("File successfully moved...\n");
+
+                    return 0;
+                }
+
+                void ExitSys(LPCSTR lpszMsg)
+                {
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr;
+
+                    if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                        fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "GetFileSize" : Windows sistemlerinde GetFileSize API fonksiyonu açılmış bir dosyanın uzunluğunu bize verir. Bu fonksiyonun GetFileSizeEx isminde genişletilmiş bir biçimi de vardır. GetFileSiz
+        fonksiyonun prototipi şöyledir:
+
+            DWORD GetFileSize(
+                HANDLE  hFile,
+                LPDWORD lpFileSizeHigh
+            );
+
+        Fonksiyonun birinci parametresi açılmış dosyanın handle değerini almaktadır. Fonksiyonun geri dönüş değeri dosya uzunluğunun düşük anlamlı DWORD kısmıdır. Fonksiyonun ikinci parametresi dosya uzunluğunun
+        yüksek anlamlı DWORD kısmının yerleştirileceği DWORD nesnenin adresini almaktadır. İkinci pparametre NULL geçilebilir. Bu durumda dosyanın ununluğunun yüksek anlamlı DWORD değeri elde edilemez. Fonksiyonun
+        ikinci parametresi NULL girilmediğinde fonksiyon başarısız olursa fonksiyon INVALID_FILE_SIZE özel değerine geri dönmektedir. Tabii bu özel değerin aslında dosyanın gerçek uzunluk değeri olma olasılığı da
+        vardır. Bu nedenle MSDN dokümanları böylesi bir durumda ayrıca GetLastError fonksiyonun çağrılması gerektiğini belirtmektedir. Fonksiyon başarısız ise GetLastError kesinlikle NO_ERROR dışında bir değer
+        vermektedir. Ancak fonksiyon da şöyle bir kusur vardır: Eğer fonksiyonun ikinci aparametresi NULL geçilirse bu durumda fonksiyonun geri dönüş değerinde başarı ya da başarısızlık anlaşılamamaktadır. 
+
+            dwSizeLow = GetFileSize(hFile, &dwLow);
+            if (dwSizeLow == INVALID_FILE_SIZE && GetLastError() != NO_ERROR)
+                ExitSys("GetFileSize");
+
+        Açık bir dosyanın uzunluğunu elde etmenin diğer bir yolu da dosya göstericisini EOF durumuna yerleştirip dosya göstericisinin konumunu almak olabilir. Tabii bir dosyanın uzunluğunu almak için dosyanın
+        açılması oldukça zahmetlidir. Aslında dosyayı hiç açmadan dosya uzunluğunun elde edilmesi de mümkündür. Bu işlemin yapılabileceği izleyen paragraflarda ele alınmaktadır.
+            * Örnek 1, Aşağıdaki örnekte dosya uzunluğu GetFileSize fonksiyonu ile elde edilmiştir. Bu örnekte fonksiyonun ikinci aparamtresi NULL girilmiştir.
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    HANDLE hFile;
+                    DWORD dwSizeLow, dwSizeHigh;
+
+                    if ((hFile = CreateFile("Test.c", GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE)
+                        ExitSys("CreateFile");
+
+                    if ((dwSize = GetFileSize(hFile, &dwSizeHigh)) == INVALID_FILE_SIZE && GetLastError() != NO_ERROR)
+                        ExitSys("GetFileSize");
+
+                    printf("%lu\n", (unsigned long)dwSize);		/* prints only low part */
+
+                    CloseHandle(hFile);
+
+                    return 0;
+                }
+
+                void ExitSys(LPCSTR lpszMsg)
+                {
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr;
+
+                    if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                        fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+        GetFileSize fonksiyonundaki tasarım hatası GetFileSizeEx fonksiyonuyal gidirilmiştir.
+            >>>> "GetFileSizeEx" : GetFileSizeEx fonksiyonunun prototipi şöyledir:
+
+                BOOL GetFileSizeEx(
+                    HANDLE         hFile,
+                    PLARGE_INTEGER lpFileSize
+                );
+
+            Fonksiyon dosya uzunluğunu LARGE_INTEGER türündne bir yapı nesnesinin içerisine yerleştirmektedir. Fonksiyonun geri dönüş değeri işlemin başarısını belirtmektedir. LARGE_INTEGER yapısı şöyle
+            bildirilmiştir:
+
+                typedef union _LARGE_INTEGER {
+                    struct {
+                    DWORD LowPart;
+                    LONG  HighPart;
+                    } DUMMYSTRUCTNAME;
+                    struct {
+                    DWORD LowPart;
+                    LONG  HighPart;
+                    } u;
+                    LONGLONG QuadPart;
+                } LARGE_INTEGER;
+
+            Aşağıda GetFileSizeEx API fonksiyonunun kullanımına bir örnek verilmiştir.
+                * Örnek 1,
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <windows.h>
+
+                    void ExitSys(LPCSTR lpszMsg);
+
+                    int main(void)
+                    {
+                        HANDLE hFile;
+                        LARGE_INTEGER li;
+
+                        if ((hFile = CreateFile("Test.c", GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE)
+                            ExitSys("CreateFile");
+
+                        if (!GetFileSizeEx(hFile, &li))
+                            ExitSys("GetFileSizeEx");
+
+                        printf("%lld\n", li.QuadPart);
+
+                        CloseHandle(hFile);
+
+                        return 0;
+                    }
+
+                    void ExitSys(LPCSTR lpszMsg)
+                    {
+                        DWORD dwLastErr = GetLastError();
+                        LPTSTR lpszErr;
+
+                        if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                            fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                            LocalFree(lpszErr);
+                        }
+
+                        exit(EXIT_FAILURE);
+                    }
+
+        >>> "CreateDirectory" : Bir dizin (directory) de aslında bir çeşit dosyadır. Normal bir dosyanın içerisinde dosyanın bilgileri bulunur. Ancak bir dizin dosyasının içerisinde o dizindeki dosyaların
+        neler olduğuna yönelik bilgiler bulunmaktadır. İşletim sistemleri genel olarak normal dosyalarla dizinleri aynı biçimde organize derler. Windows'ta bir dizin yaratmak için CreateDirectory isimli API
+        fonksiyonu kullanılır. Fonksiyonun prototipi şöyledir:
+
+            BOOL CreateDirectory(
+                LPCSTR                lpPathName,
+                LPSECURITY_ATTRIBUTES lpSecurityAttributes
+            );
+
+        Fonksiyonun birinci parametresi yaratılacak dizin'in yol ifadesini belirtmektedir. İkinci parametre yaratılcacak dizin'in güvenlik özelliklerini almaktadır. Bu parametre NULL eçilebilir. Fonksiyonun geri
+        dönüş değeri işlemin başarsını belirtmektedir. Bir dizin yaratıldığında içerisine otomatik olarak iki dizin girişi yerleştirilmektedir. Bu dizin girişlerinin isimleri "." ve ".." biçimindedir. "." ve ".."
+        girişleri de birer dizin belirtir. "." girişi içinde bulunulan dizini, ".." girişi ise içinde bulunulan dizinin üst dizinini belirtir. Bu dizin girişleri silinememektedir. Kök dizinin dışında tüm alt
+        dizinlerde her zaman "." ve ".." dizin girişleri bulunmaktadır. 
+            * Örnek 1, Aşağıdaki Windows'ta CreateDirectory fonksiyonunun kullanımına bir örnek verilmiştir. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    if (!CreateDirectory("TestDir", NULL))
+                        ExitSys("CreateDirectory");
+
+                    printf("Ok\n");
+
+                    return 0;
+                }
+
+                void ExitSys(LPCSTR lpszMsg)
+                {
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr;
+
+                    if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                        fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "RemoveDirectory" : Windows'ta bir dizin silmek için RemoveDirectory isimli API fonksiyonu kullanılır. Fonksiyonun prototipi şöyledir:
+
+            BOOL RemoveDirectory(
+                LPCSTR lpPathName
+            );
+
+        Fonksiyon parametre olarak silinecek dizin'in yol ifadesini almaktadır. Geri dönüş değeri işlemin başarısını belirtir. RemoevDirectory fonksiyonu ile biz ancak boş dizinleri silebiliriz. Bir dizin'in boş
+        olması demek onun içerisinde "." ve ".." dışında hiçbir dizin girişinin olmaması demektir. (Zaten bu "." ve ".." girişlerinin silinemediğine dikkat ediniz.) Fonksiyonun yalnızca boş dizinleri silmesi
+        güvenli bir kullanım için öngörülmüştür. Aksi takdirde yanlıklıkla büyük bir dizin ağacı silinebilirdi. Geri Dönüşüm Kutusu (Recycle Bin) işletim sisteminin çekirdeği ile ilgili bir oragizasyon değildir.
+        Kabuk kısmı ile ilgili bir organizasyondur. Bu nedenle DeleteFile ya da RemoveFile API fonksiyonları silinen öğeleri geri dönüş kutusuna atamaz. Biz "Dosya Gezgini (File Explorer)" ile bir dosyayı ya da
+        dizini sildiğimizde dosya gezgini default durumda silinen bu öğeleri geri dönüş kutusuna atmaktadır. Bu durum anlaşılabilir. Çünkü geri dönüşüm kutusu zaten kabuk tarafından organize edilmektedir. Dosya
+        gezgininde bir dizinin üzerine gelip DEL tuşu ile dizini silmenin de bu bakımdan bir geri dönüş vardır. Halbuki RemoveDirectory ile bu biçimde geri dönüş mümkün değildir. 
+            * Örnek 1, Aşağıda bir dizinin silinmesi örneği verilmiştir. Bju örneği test ederken dizin'in içerisine dosya yerleştirerek de programı çalıştırınız. Bu durumda RemoveDirectory fonksiyonunun başarısız
+            olduğunu göreceksiniz. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    if (!RemoveDirectory("TestDir", NULL))
+                        ExitSys("CreateDirectory");
+
+                    printf("Ok\n");
+
+                    return 0;
+                }
+
+                void ExitSys(LPCSTR lpszMsg)
+                {
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr;
+
+                    if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                        fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+        
+    >> UNIX/Linux POSIX Fonksiyonları: 
+        >>> "unlink" : UNIX/Linux sistemlerinde dosya unlink isimli POSIX fonksiyonu ile silinmektedir. Bu sistemlerde aslında remove standart C fonksiyonu doğrudan bu unlink fonksiyonunu çağırmaktadır. Başka bir
+        deyişle bu sistemlerde remove fonksiyonu ile unlink fonksiyonu arasında bir fark yoktur. unlink fonksiyonun prototipi şöyledir:
+
+            #include <unistd.h>
+            int unlink(const char *pathname);
+
+        Fonksiyon parametre olarak silinecek dosyanın yol ifadesini alır. Başarı durumunda 0 değerine başarısızlık durumunda -1 değerine geri döner. errno değişkeni uygun biçimde set edilir. Yukarıda da aslında
+        dizinlerin normal dosyalar gibi olduğunu belirtmiştik. Dizinler aslında "dizinler içerisindeki girişlerin tutulduğu" normal dosyalar gibidir. Bir dosyanın silinmesi aslında o dosyanın içinde bulunduğu
+        dizinde bir yazma işlemini gerektirmektedir. Bu nedenle UNIX/Linux sistemlerinde bir dosyayı silebilmek için prosesin dosyaya "w" hakkının olması gerekmez. Önemli olan prosesin dosyanın içinde bunduğu
+        dizine "w" hakkının olmasıdır. O halde bu sistemlerde bir dosyanın silinebilmesi için remove ya da unlink fonksiyonunu çağıran prosesin dosyanın içinde bulunduğu dizine yazma hakkının olmasıdır. 
+            * Örnek 1, Aşağıda komut satırı argümanı olarak alınan dosyaların unlink fonksiyonuyla silinmesine yönelik bir örnek verilmiştir. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <string.h>
+                #include <errno.h>
+                #include <unistd.h>
+
+                int main(int argc, char *argv[])
+                {
+                    if (argc == 1) {
+                        fprintf(stderr, "wrong number of arguments!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    for (int i = 1; i < argc; ++i)
+                        if (unlink(argv[i]) == -1)
+                            fprintf(stderr, "cannot unlink %s: %s\n", argv[i], strerror(errno));
+
+                    return 0;
+                }
+        
+        >>> "chmod" : Anımsanacağı gibi UNIX/Linux sistemlerinde dosyanın erişim hakları dosya open fonksiyonuyla yaratılırken fonksiyonun üçüncü parametresiyle belirleniyordu. İşte dosyanın erişim hakları daha
+        sonra da chmod isimli POSIX fonkisyonuyla değiştirilebilmektedir. Fonksiyonun prototipi şöyledir:
+
+            #include <sys/stat.h>
+            int chmod(const char *pathname, mode_t mode);
+
+        Fonksiyonun birinci parametresi erişim hakları değiştirilecek dosyanın yol ifadesini ikinci parametresi yeni erşim haklarını belirtmektedir. Erişim hakları değiştirlirken prosesin umask değeri işlemde
+        etkili olmamaktadır. Açık dosyaların erişim hakları da fchmod fonksiyonuyla değiştirilmektedir.
+            >>>> "fchmod" : Fonksiyonun prototipi şöyledir:
+
+                #include <sys/stat.h>
+                int fchmod(int fd, mode_t mode);
+
+            Fonksiyonun birinci parametresi dosya betimleyicisini ikinci parametresi erişim haklarını belirtmektedir. Fonksiyonlar başarı durumunda 0 değerine, başarısızlık durumunda -1 değerine geri döner ve errno
+            değişkeni uygun biçimde set edilmektedir.
+                * Örnek 1, Aşağıda fchmod fonksiyonun kullanılmasına bir örnek verilmiştir. 
+                    #include <stdio.h>
+                    #include <stdlib.h>
+                    #include <fcntl.h>
+                    #include <sys/stat.h>
+                    #include <unistd.h>
+
+                    void exit_sys(const char *msg);
+
+                    int main(void)
+                    {
+                        int fd;
+
+                        if ((fd = open("test.txt", O_RDONLY)) == -1)
+                            exit_sys("open");
+
+                        if (fchmod(fd, S_IRUSR | S_IWUSR) == -1)
+                            exit_sys("fchmod");
+
+                        close(fd);
+
+                        printf("success...\n");
+
+                        return 0;
+                    }
+
+                    void exit_sys(const char *msg)
+                    {
+                        perror(msg);
+
+                        exit(EXIT_FAILURE);
+                    }
+
+        Eğer dosya zaten açıksa dosyanın diskte isimsel olarak aranmasına gerek kalmayacağı için fchmod fonksiyonu chmod fonksiyonuna göre daha hızlı işlem yapma potansiyelindedir. chmod fonksiyonuyla bir dosyanın
+        erişim haklarının değiştirilebilmesi için fonksiyonu çağıran prosesin etkin kullanıcı id'si dosyanın kullanıcı id'si ile aynı olması ya da prosesin "uygun önceliğe (appropriate privilige)" sahip olması
+        gerekmektedir.
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <sys/stat.h>
+
+                void exit_sys(const char *msg);
+
+                int main(void)
+                {
+                    if (chmod("test.txt", S_IRUSR | S_IWUSR) == -1)
+                        exit_sys("chmod");
+
+                    printf("success...\n");
+
+                    return 0;
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+
+                    exit(EXIT_FAILURE);
+                } 
+
+            * Örnek 2, Aşağıdaki örnekte komut satırından alınan dosyaların erişim hakları komut satırından verilen erişim hakkı değiştirilmektedir. Programın kullanımı aşağıdaki
+            gibidir: "./mychmod 666 x.dat y.dat ..."
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <stdbool.h>
+                #include <string.h>
+                #include <errno.h>
+                #include <sys/stat.h>
+
+                bool check_octal(const char *str);
+                void exit_sys(const char *msg);
+
+                int main(int argc, char *argv[])		
+                {
+                    int mode;
+
+                    if (argc < 3) {
+                        fprintf(stderr, "wrong number of arguments!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if (!check_octal(argv[1])) {
+                        fprintf(stderr, "file mode incorrect!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    sscanf(argv[1], "%o", &mode);
+
+                    for (int i = 2; i < argc; ++i)
+                        if (chmod(argv[i], mode) == -1)
+                            fprintf(stderr, "chmode failed for %s: %s\n", argv[i], strerror(errno));
+
+                    return 0;
+                }
+
+                bool check_octal(const char *str)
+                {
+                    while (*str != '\0') {
+                        if (*str < '0' || *str > '8')
+                            return false;
+                        ++str;
+                    }
+
+                    return true;
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "mkdir" : UNIX/Linux sistemlerinde bir "dizin (directory)" yaratmak için mkdir isimli POSIX fonksiyonu kullanılmaktadır. Fonksiyonun prototipi şöyledir:
+
+            #include <sys/stat.h>
+            int mkdir(const char *pathname, mode_t mode);
+
+        Fonksiyonun birinci parametresi dizin'in yol ifadesini ikinci parametresi ise dizin'in erişim haklarını almaktadır. Erişim haklarında prosesin umask değeri etkili olmaktadır. Dizinlerdeki erişim haklarında
+        "x" hakkı özel ve başka bir anlama gelmektedir. Normal olarak dizinlerde "x" var olduğuna dikkat ediniz. Fonksiyon başarı durumunda 0 değerine başarısızlık durumunda -1 değerine geri dönmektedir. başarısızlık
+        durumunda errno değişkeni uygun biçimde set edilmektedir. Bir dizin yaratabilmek için ve bir dosya yaratabilmek için o diznin'in ya da dosyanın yaratılacağı dizine "w" hakkının olması gerekir. Çünkü yukarıda
+        da belirttiğimiz gibi dizinler aslında "içerisinde dosya bilgilerinin bulunduğu dosyalar" gibidir. Dolayısıyla bir dizinde dosya ya da dizin yaratmak aslında o dizin dosyası üzerinde bir değişiklik yapma
+        anlamına gelmektedir. Bu nedenle de prosesin ilgili dizine "w" hakkının bulunması gerekmektedir. Tabii "uygun önceliğe (appropriate privilege)" sahip prosesler her yerde dizin yaratabilirler. Yine UNIX/Linux
+        sistemlerinde de bir dizin yaratıldığında dizin içerisinde "." ve ".." isimli iki dizin girişi oluşturulmaktadır. 
+            * Örnek 1, Aşağıda mkdir programının bir benzeri mymkdir ismiyle yazılmıştır. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <stdbool.h>
+                #include <string.h>
+                #include <errno.h>
+                #include <fcntl.h>
+                #include <unistd.h>
+                #include <sys/stat.h>
+                #include <getopt.h>
+
+                bool check_octal(const char *str);
+                void exit_sys(const char *msg);
+
+                int main(int argc, char *argv[])
+                {
+                    int m_flag;
+                    int err_flag;
+                    char *m_arg;
+                    int result;
+                    int mode;
+
+                    struct option options[] = {
+                        {"mode", required_argument, NULL, 'm'},
+                        {0, 0, 0, 0}
+                    };
+
+                    m_flag = err_flag = 0;
+
+                    opterr = 0;
+                    while ((result = getopt_long(argc, argv, "m:", options, NULL)) != -1) {
+                        switch (result) {
+                        case 'm':
+                            m_arg = optarg;
+                            m_flag = 1;
+                            break;
+
+                        case '?':
+                            if (optopt == 'm')
+                                fprintf(stderr, "option -m or --mode without argument!..\n");
+                            else if (optopt != 0)
+                                fprintf(stderr, "invalid option: -%c\n", optopt);
+                            else
+                                fprintf(stderr, "invalid long option: %s\n", argv[optind - 1]);
+                            err_flag = 1;
+
+                            break;
+                        }
+                    }
+
+                    if (err_flag)
+                        exit(EXIT_FAILURE);
+
+                    if (argc - optind == 0) {
+                        fprintf(stderr, "requires at least one path name!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if (m_flag) {
+                        if (!check_octal(m_arg)) {
+                            fprintf(stderr, "invalid file mode: %s\n", m_arg);
+                            exit(EXIT_FAILURE);
+                        }
+                        sscanf(m_arg, "%o", &mode);
+                        umask(0);
+                    }
+                    else
+                        mode = 0777;		/* POSIX 2008 ve sonrasında doğrudna sayı girilebiliyor */
+
+                    for (int i = optind; i < argc; ++i)
+                        if (mkdir(argv[i], mode) == -1)
+                            perror(argv[i]);
+
+                    return 0;
+                }
+
+                bool check_octal(const char *str)
+                {
+                    while (*str != '\0') {
+                        if (*str < '0' || *str > '8')
+                            return false;
+                        ++str;
+                    }
+
+                    return true;
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "rmdir" : UNIX/Linux sistemlerinde dizin silmek için rmdir isimli POSIX fonksiyonu kullanılmaktadır. Fonksiyonun prototipi şöyledir:
+
+            #include <unistd.h>
+            int rmdir(const char *pathname);
+
+        Fonksiyon dizin'in yol ifadesini parametre olarak alır. Başarı durumunda 0 değerine başarısızlık durumunda -1 değerine geri döner. Yine bir dizin'in silinmnesi için prosesin dizin'in içinde bulunduğu dizine
+        "w" hakkına sahip olması ya da "uygun önceliğe (appropriate privilege)" sahip olması gerekmektedir. 
+            * Örnek 1, Aşağıda dizin silmeye yönelik bir örnek verilmiştir. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <unistd.h>
+
+                int main(int argc, char *argv[])
+                {
+                    if (argc < 2) {
+                        fprintf(stderr, "wrong number of arguments!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    for (int i = 1; i < argc; ++i)
+                        if (rmdir(argv[i]) == -1)
+                            perror(argv[i]);
+
+                    return 0;
+                }
+
+        >>> "stat", "lstat" ve "fstat" : Bir dosyanın çeşitli bilgileri stat, lstat ve fstat fonksiyonlarıyla elde edilmeketdir. Aslında "ls -l" komutu bu fonksiyonlar kullanılarak yazılmıştır. Biz bu fonksiyonlarla
+        bir dosyanın eriim haklarını, kullanıcı ve grup id'lerini, uzunluğunu vs. elde edebiliriz. Bu üç fonksiyon aslında aynı amaca hizmet etmektedir. Aralarında küçük farklılılar vardır. Fonksiyonların prototipleri
+        şöyledir:
+
+            #include <sys/stat.h>
+            int stat(const char *path, struct stat *buf);
+            int fstat(int fd, struct stat *buf);
+            int lstat(const char *path, struct stat *buf);
+
+        stat fonksiyonu yol ifadesiyle belirtilen dosyanın bilgilerini elde eder. fstat fonksiyonu ise dosya zaten açılmışsa dosya betimleyicisinden hareketle dosya bilgilerini elde etmektedir. lstat fonksiyonu da yol
+        ifadesinden hareketle dosya bilgilerini elde eder. Ancak lstat sembolik bağlantı dosyalarını izlememektedir. Sembolik bağlantı dosyaları hakkında ileride bilgiler verilecektir. Fonksiyonlar dosya bilgilerini 
+        ikinci parametreleriyle belirtilen struct stat isimli bir yapı nesnesinin içerisine yerleştirmektedir. Fonksiyonlar başarı durumunda 0 değrine başarısızlık durumunda -1 değerine geri dönmektedir. errno
+        değişkeni başarısızlık durumunda uygun biçimde set edilmektedir. struct stat yapısı <sys/stat.h> dosyası içerisinde şöyle bildirilmiştir:
+
+            struct stat {
+                dev_t     st_dev;     /* ID of device containing file */
+                ino_t     st_ino;     /* inode number */
+                mode_t    st_mode;    /* protection */
+                nlink_t   st_nlink;   /* number of hard links */
+                uid_t     st_uid;     /* user ID of owner */
+                gid_t     st_gid;     /* group ID of owner */
+                dev_t     st_rdev;    /* device ID (if special file) */
+                off_t     st_size;    /* total size, in bytes */
+                blksize_t st_blksize; /* blocksize for file system I/O */
+                blkcnt_t  st_blocks;  /* number of 512B blocks allocated */
+
+                struct timespec  st_atim;  /* Time of last access */
+                struct timespec  st_mtim;  /* Time of last modification */
+                struct timespec  st_ctim;  /* Time of last status change */
+
+                #define st_atime  st_atim.tv_sec  /* Backward compatibility */
+                #define st_mtine  st_mtim.tv_sec
+                #define st_ctime  st_ctim.tv_sec
+            };
+
+        Yapının elemanlarında kullanılan xxx_t biçimindeki tür isimlerinin hepsi <sys/stat.h> ve <sys/types.> dosyaları içerisinde typedef edilmiştir. Yapının,
+            
+            -> st_dev elemanı dosya içinde bulunduğu aygıtın aygıt numarasını belirtmektedir.
+            -> dev_t türü bir tamsayı türü biçiminde typedef edilmek zorundadır. 
+            -> st_ino elemanı dosyanın i-node numarasını belirtmektedir. inode numarası konusu ileride ele alınacaktır. ino_t türü  işaretsiz bir tamsayı türü biçiminde typedef edilmek zorundadır.
+            -> st_mode elemanı dosyanın türünü ver erişim haklarını içermektedir. mode_t türü bir tamsayı türü biçiminde typedef edilmek zorundadır. 
+            -> st_nlink elemanı dosyanın "hard link sayısını" belirtmektedir. Hard link kavramı ileride ele alınacaktır. nlink_t bir tamsayı türü olacak biçimde typedef edilmek zorundadır.
+            -> st_uid ve st_gid elemanları sırasıyla dosyanın kullanıcı ve grup id değerlerini belirtmektedir. uid_t ve gid_t tamsı birer tamsayı türü olarak typedef edilmek zorundadır. 
+            -> st_rdev elemanı eğer dosya bir aygıt sürücü dosyası (device file) ise o aygıt sürücü dosyasının aygıt numarasını belirtmektedir.
+            -> st_size elemanı dosyanın uzunluğunu belirtmektedir. off_t işaretli bir tamsayı türü biçiminde typedef edilmek zorundadır. 
+            -> st_blksize elemanı dosyanın içinde bulunduğu aygıttaki dosya parçalarının tutulduğu bloğun uzunluğunu belirtmektedir. Bu uzunluk sektör katlarında (512'nin katlarında) olacaktır. Bugün tipik olarak
+            ext dosya sistemleri formatlanırken bir blok 8 sektör alınmaktadır. Ancak bu durum çeşitli faktörlere bağlı olarak değişebilmektedir. Dosya bloklarının ne anlam ifade etiiği kursumuzun ilerleyen
+            bölümlerinde ele alınacaktır. blksize_t işaretli bir tamsayı türü biçiminde typedef edilmek zorundadır.
+            -> st_blocks elemanı dosyanın diskte kaç sektörde (yani kaç tane 512 byte içerisinde) bulunduğunu belirtmektedir. blkcnt_t işaretli bir tamsayı türü biçiminde typedef edilmek zorundadır.
+            -> st_atim, st_mtim ve st_ctim elemanları sırasıyla dosyadan son okuma yazpıldığı zamanı, dosyaya son yazma yapıldığı zamanı ve dosyanın i-node bilgilerinin (yani stat fonksiyonu şle elde ettiğimiz
+            meta-data bilgilerinin) değiştirildiği zamanı belirtmektedir. Eskiden bu elemanlar time_t türündendi ve 01/01/1970 tarihinden geçen saniyesi sayısını belirtmekteydi. Sonra POSIX Standartlarının 2008
+            versiyonunda bu elemanlar detaylandırılmış ve timespec isimli bir yapı türünden yapılmışitır. timepec yapısı hem 01/01/1970'ten geçen saniye sayısını ve aynı zamanda o saniyeden sonraki nano saniye
+            sayısını tutmaktadır. Yani timespec yapısı tarih ve zamanı nano saniye duyarlılığında tutmaktadır. timespec yapısı şöyle bildirilmiştir:
+
+                struct timespec {
+                    time_t		tv_sec;
+                    long		tv_nsec;
+                };
+
+            Eskiden stat yapısının bu tarih zaman bilgisini içeren elemanlarının isimleri ve türleri şöyleydir:
+
+                time_t st_atime;
+                time_t st_mtime;
+                time_t st_ctime;
+
+            POSIX 2008 ile bu konuda değişiklik yapılınca eski programların derlenebilmesi için şu makrolar bulundurulmaktadır:
+                
+                #define st_atime  st_atim.tv_sec  
+                #define st_mtine  st_mtim.tv_sec
+                #define st_ctime  st_ctim.tv_sec
+    
+            Böylece programcılar dilerlerse eski isimleri de kullanabilmektedir. Dosya sistemi ile ilgili hangi POSIX fonksiyonlarının bu üç tarih zaman bilgisinin hangilerini değiştirdiği POSIX standartlarında
+            açıkça belirtilmiştir. Örneğin write POSIX fonksiyonu dosyanın st_mtim ve st_ctim elemanlarını değiştirmektedir. Örneğin rmdir fonksyonu üst dizinin st_mtim ve st_ctim elemanlarını değiştirmektedir. 
+
+        stat yapısının st_mode elemanının dosyanın türü ve erişim bilgilerini verdiğini belirtmiştik. Dosyanın türü ve erişim hakları bu st_mode elemanının çeşitli bitlerine kodlanmıştır. Programcının bu bilgilerin
+        hangi bitlere kodlandığını bilmesine gerek yoktur. POSIX standartları bu tür bilgilerinin st_mode elemanının hangi bitlerine kodlandığı konusunda da bir açıklama bulunmamaktadır. Ancak <sys/stat.h> dosyası 
+        içerisinde S_ISXXX biçiminde çeşitli tür makroları bulundurulmuştur. Programcı yapının st_mode elemanını bu makrolara argüman olarak verdiğinde bu makrolar elemanın ilgili bitlerine bakarak dosyanın ilgili
+        türden olup olmadığını belirlerler. Eğer dosya ilgili türdense bu makrolar sıfır dışı bir değer ilgili türden değilse 0 değerine geri dönmektedir.  Bu makrolar şunlardır:
+
+            S_ISBLK(m)		Dosya bir blok aygıt sürücü dosyası mı? (ls -l komutunda "b" harfi ile temsil ediliyor)
+            S_ISCHR(m)		Dosya bir karakter aygıt sürücü dosyası mı? (ls -l komutunda "c" harfi ile temsil ediliyor)
+            S_ISDIR(m)    	Dosya bir dizin dosyası mı? (ls -l komutunda "d" harfi ile temsil ediliyor)
+            S_ISFIFO(m) 	Dosya bir boru (pipe) dosyası mı? (ls -l komutunda "p" harfi ile temsil ediliyor)
+            S_ISREG(m)		Dosya sıradan bir disk dosyası mı? (regular file) (ls -l komutunda "-" harfi ile temsil ediliyor)
+            S_ISLNK(m)		Dosya bir sembolik bağlantı dosyası mı? (ls -l komutunda "l" harfi ile temsil ediliyor)
+            S_ISSOCK(m)		Dosya bir UNIX Domain soket dosyası mı? (ls -l komutunda "s" harfi ile temsil ediliyor)
+
+        O halde örneğin dosyanın türünü şöyle belirleyebiliriz:
+
+            struct stat finfo;
+            ...
+            if (stat(path, &finfo) == -1) 
+                exit_sys("stat");
+            ...
+            if (S_ISBLK(finfo.st_mode))
+                putchar('b');
+            else if (S_ISCHR(finfo.st_mode))
+                putchar('c');
+            else if (S_ISDIR(finfo.st_mode))
+                putchar('d');
+            else if (S_ISFIFO(finfo.st_mode))
+                putchar('p');
+            else if (S_ISREG(finfo.st_mode))
+                putchar('-');
+            else if (S_ISLNK(finfo.st_mode))
+                putchar('l');
+            else if (S_ISSOCK(finfo.st_mode))
+                putchar('s');
+            else 
+                putchar('?');
+
+        Dosyanın türünü stat yapısının st_mode elemanından elde etmenin diğer bir yolu da bu st_mode elemanını önce S_IFMT değeriyle bit AND çekmek ve bunun sonucunu switch deyimine sokmak olabilir. S_IFMT st_mode
+        elemanı ile bit AND işlemi dosya türüne ilişkin olan bitlerininin elde edilmesine yol açmaktadır. Bit AND işlemi sonucunda elde edilen değerler şunlardan birine eşit olmak zorundadır:
+
+            S_IFBLK
+            S_IFCHR
+            S_IFIFO
+            S_IFREG
+            S_IFDIR
+            S_IFLNK
+            S_IFSOCK
+
+        Bu durumda dosya türü şöyle de tespit edebilir:
+
+            struct stat finfo;
+            ...
+            if (stat(path, &finfo) == -1) 
+                exit_sys("stat");
+            ...
+            switch (finfo.st_mode & S_IFMT) {
+                    case S_IFBLK:
+                        putchar('b');
+                        break;
+                    case S_IFCHR:
+                        putchar('c');
+                        break;
+                    case S_IFIFO:
+                        putchar('p');
+                        break;
+                    case S_IFREG:
+                        putchar('-');
+                        break;
+                    case S_IFDIR:
+                        putchar('d');
+                        break;
+                    case S_IFLNK:
+                        putchar('l');
+                        break;
+                    case S_IFSOCK:
+                        putchar('s');
+                        break;
+                    default:
+                        putchar('?');
+                        break;
+            }
+
+        Dosyanın erişimn haklarını elde etmenin bir yolu doğrudan yapının st_mode elemanını open fonksiyonunda görmüş olduğumuz S_IXXX değerleriyle bit AND işlemine sokmaktır. Eğer bu işlemin sonucu sıfır dışı bir
+        değerse bu durumda ilgili erişim hakkı dosyada vardır. Eğer 0 ise ilgili erişim hakkı dosyada yoktur. Bu durumda dosyanın erişim haklarını ls -l formatında şöyle yazdırabiliriz:
+
+            mode_t modes[9] = {S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH};
+            ...
+            for (int i = 0; i < 9; ++i)
+                putchar(finfo.st_mode & modes[i] ? "rwx"[i % 3] : '-');
+
+        Daha önceden de belirttiğimiz gibi POSIX 2008 ile birlikte artık S_IXXX sembolik sabitlerinin değerleri açıkça standartlarda belirtilmiştir. Bu değerler incelendiğinde aslında bir sayının düşük anlamlı 9
+        bitine karşılık geldiği örülmektedir. Başka bir deyişle bu sembolik sabitler aslında bütün bitleri 0 yalnızca düşük anlamlı 9 bitinden bir 1 olan sembolik sabitlerdir. Böylece biz aynı işlemleri aslında
+        POSIX 2008 ve sonrasında değerleri bir diziye yerleştirmeden aşağıdaki gibi de yapabilmekteyiz:
+
+            for (int i = 8; i >= 0; --i)
+                putchar(finfo.st_mode >> i & 1 ? "rwx"[(8 - i) % 3] : '-');
+
+        Şimdi de bu fonksiyonların kullanımına ilişkin örnekleri inceleyelim:
+            * Örnek 1, Aşağıda stat fonksiyonun kullanılmasına bir örnek verilmiştir.
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <stdint.h>
+                #include <time.h>
+                #include <locale.h>
+                #include <sys/stat.h>
+
+                void exit_sys(const char *msg);
+
+                int main(int argc, char *argv[])
+                {
+                    struct stat finfo;
+                    mode_t modes[9] = {S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH};
+                    char buf[32];
+                    struct tm *ptm;
+
+                    if (setlocale(LC_ALL, "tr_TR.utf-8") == NULL) {
+                        fprintf(stderr, "cannot set locale!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if (argc == 1) {
+                        fprintf(stderr, "wrong number of arguments!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    for (int i = 1; i < argc; ++i) {
+                        if (stat(argv[i], &finfo) == -1) {
+                            perror(argv[i]);
+                            continue;
+                        }
+                        printf("File Name: %s\n", argv[i]);
+                        printf("File Mode: ");
+                        /*
+                        if (S_ISBLK(finfo.st_mode))
+                            putchar('b');
+                        else if (S_ISCHR(finfo.st_mode))
+                            putchar('c');
+                        else if (S_ISDIR(finfo.st_mode))
+                            putchar('d');
+                        else if (S_ISFIFO(finfo.st_mode))
+                            putchar('p');
+                        else if (S_ISREG(finfo.st_mode))
+                            putchar('-');
+                        else if (S_ISLNK(finfo.st_mode))
+                            putchar('l');
+                        else if (S_ISSOCK(finfo.st_mode))
+                            putchar('s');
+                        else 
+                            putchar('?');
+                        */
+
+                        switch (finfo.st_mode & S_IFMT) {
+                            case S_IFBLK:
+                                putchar('b');
+                                break;
+                            case S_IFCHR:
+                                putchar('c');
+                                break;
+                            case S_IFIFO:
+                                putchar('p');
+                                break;
+                            case S_IFREG:
+                                putchar('-');
+                                break;
+                            case S_IFDIR:
+                                putchar('d');
+                                break;
+                            case S_IFLNK:
+                                putchar('l');
+                                break;
+                            case S_IFSOCK:
+                                putchar('s');
+                                break;
+                            default:
+                                putchar('?');
+                                break;
+                        }
+                        
+                        for (int i = 0; i < 9; ++i)
+                            putchar(finfo.st_mode & modes[i] ? "rwx"[i % 3] : '-');
+                                
+                        /*
+                        for (int i = 8; i >= 0; --i)
+                            putchar(finfo.st_mode >> i & 1 ? "rwx"[(8 - i) % 3] : '-');
+                        */
+
+                        putchar('\n');
+                        printf("Hard Link Count: %ju\n", (uintmax_t)finfo.st_nlink);
+                        printf("User Id: %ju\n", (uintmax_t)finfo.st_uid);
+                        printf("Group Id: %ju\n", (uintmax_t)finfo.st_gid);
+                        printf("Size: %jd\n", (intmax_t)finfo.st_size);
+                    
+                        ptm = localtime(&finfo.st_mtim.tv_sec);
+                        strftime(buf, 32, "%b %2e %Y %H:%M\n", ptm);
+                        printf("Last Modification Time: %s\n", buf);
+
+                        printf("--------------------------\n");
+                    }
+
+                    return 0;
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+
+                    exit(EXIT_FAILURE);
+                }
+
+            * Örnek 2, 	Aağıdaki örnekte dosya bilgileri "ls -l" formatına benzer biçimde stdout dosyasına yazdırılmıştır. Ancak burada dosyanın kullanıcı ve grup id'leri isimsel olarak değil sayısal olarak
+            yazdırılmaktadır. İzleyen paragraflarda bu işlemin nasıl yapıldığını göreceğiz.
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <stdint.h>
+                #include <time.h>
+                #include <locale.h>
+                #include <sys/stat.h>
+
+                void exit_sys(const char *msg);
+
+                int main(int argc, char *argv[])
+                {
+                    struct stat finfo;
+                    mode_t modes[9] = {S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH};
+                    char buf[32];
+                    struct tm *ptm;
+
+                    if (setlocale(LC_ALL, "tr_TR.utf-8") == NULL) {
+                        fprintf(stderr, "cannot set locale!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if (argc == 1) {
+                        fprintf(stderr, "wrong number of arguments!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    for (int i = 1; i < argc; ++i) {
+                        if (stat(argv[i], &finfo) == -1) {
+                            perror(argv[i]);
+                            continue;
+                        }
+                    
+                        switch (finfo.st_mode & S_IFMT) {
+                            case S_IFBLK:
+                                putchar('b');
+                                break;
+                            case S_IFCHR:
+                                putchar('c');
+                                break;
+                            case S_IFIFO:
+                                putchar('p');
+                                break;
+                            case S_IFREG:
+                                putchar('-');
+                                break;
+                            case S_IFDIR:
+                                putchar('d');
+                                break;
+                            case S_IFLNK:
+                                putchar('l');
+                                break;
+                            case S_IFSOCK:
+                                putchar('s');
+                                break;
+                            default:
+                                putchar('?');
+                                break;
+                        }
+                        
+                        for (int i = 0; i < 9; ++i)
+                            putchar(finfo.st_mode & modes[i] ? "rwx"[i % 3] : '-');
+                                
+                        printf("%ju ", (uintmax_t)finfo.st_nlink);
+                        printf("%ju ", (uintmax_t)finfo.st_uid);
+                        printf("%ju ", (uintmax_t)finfo.st_gid);
+                        printf("%jd ", (intmax_t)finfo.st_size);
+                    
+                        ptm = localtime(&finfo.st_mtim.tv_sec);
+                        strftime(buf, 32, "%b %2e %Y %H:%M ", ptm);
+                        printf("%s ", buf);
+                        printf("%s\n", argv[i]);
+                    }
+
+                    return 0;
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+
+                    exit(EXIT_FAILURE);
+                }
+
+    Pekiyi "ls -l" komutunun yaptığı gibi ekrana kullanıcı adını ve grup adını nasıl yazdırabiliriz? Bunun için yine bir takım POSIX fonksiyonları bulunmaktadır. Bu fonksiyonları ise şunlardır;
+
+        "getpwnam", "getpwuid", "getgrnam" ve "getgrgid"
+
+    isimli fonksiyonlardır. Bu fonksiyonlardan,
+        >>> "getpwnam" ve "getpwuid" : Bu fonksiyonlar o kullanıcıya ait bilgileri, sırasıyla kullanıcının adını ve kullanıcı ID değerini kullanarak, "/etc/passwd" dosyasından temin etmektedirler. Fonksiyonların
+        prototipleri aşağıdaki gibidir:
+
+            #include <pwd.h>
+            struct passwd *getpwnam(const char *name);
+            struct passwd *getpwuid(uid_t uid);
+
+        Fonksiyonlar başarı durumunda içi doldurulan "passwd" türünden statik ömürlü bir nesneye, hata durumunda ise "NULL" değerine dönerler. "struct passwd" yapısı aşağıdaki gibi tanımlanmıştır:
+
+            struct passwd {
+                char *pw_name;       /* username */
+                char *pw_passwd;     /* user password */
+                uid_t pw_uid;        /* user ID */
+                gid_t pw_gid;        /* group ID */
+                char *pw_gecos;      /* user information */
+                char *pw_dir;        /* home directory */
+                char *pw_shell;      /* shell program */
+            };
+
+        Fonksiyon herhangi bir hatadan dolayı da yine "NULL" değerine döner fakat bu sefer "errno" değişkenini de uygun değere çeker. Dolaysıyla bizler bu fonksiyonları çağırmadan evvel "errno" değişkeninini sıfıra
+        çekmeli, çağrıdan sonra da değerini kontrol etmeliyiz. 
+
+        >>> "getgrnam" ve "getgrgid" : Bu fonksiyonlar ise o kullanıcıya ait grup bilgilerini, sırasıyla kullanıcının adını ve kullanıcı ID değerini kullanarak, "/etc/group" dosyasından temin etmektedir. Fonksiyonların
+        prototipleri aşağıdaki gibidir:
+
+            #include <grp.h>
+            struct group *getgrnam(const char *name);
+            struct group *getgrgid(gid_t gid);
+
+        Fonksiyonlar başarı durumunda içi doldurulan "group" türünden statik ömürlü bir nesneye, hata durumunda ise "NULL" değerine dönerler. "struct group" yapısı aşağıdaki gibi tanımlanmıştır:
+
+            struct group {
+                char   *gr_name;        /* group name */
+                char   *gr_passwd;      /* group password */
+                gid_t   gr_gid;         /* group ID */
+                char  **gr_mem;         /* NULL-terminated array of pointers to names of group members */
+            };
+
+        Fonksiyon herhangi bir hatadan dolayı da yine "NULL" değerine döner fakat bu sefer "errno" değişkenini de uygun değere çeker. Dolaysıyla bizler bu fonksiyonları çağırmadan evvel "errno" değişkeninini sıfıra
+        çekmeli, çağrıdan sonra da değerini kontrol etmeliyiz. 
+
+    Aşağıda bu fonksiyonların kullanımına ilişkin örnekler verilmiştir:
+        * Örnek 1, 
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <stdint.h>
+            #include <time.h>
+            #include <locale.h>
+            #include <sys/stat.h>
+            #include <pwd.h>
+            #include <grp.h>
+
+            void exit_sys(const char *msg);
+
+            int main(int argc, char *argv[])
+            {
+                struct stat finfo;
+                mode_t modes[9] = {S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH};
+                char buf[32];
+                struct tm *ptm;
+                struct passwd *pwd;
+                struct group *grp;
+
+                if (setlocale(LC_ALL, "tr_TR.utf-8") == NULL) {
+                    fprintf(stderr, "cannot set locale!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                if (argc == 1) {
+                    fprintf(stderr, "wrong number of arguments!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                for (int i = 1; i < argc; ++i) {
+                    if (stat(argv[i], &finfo) == -1) {
+                        perror(argv[i]);
+                        continue;
+                    }
+                
+                    switch (finfo.st_mode & S_IFMT) {
+                        case S_IFBLK:
+                            putchar('b');
+                            break;
+                        case S_IFCHR:
+                            putchar('c');
+                            break;
+                        case S_IFIFO:
+                            putchar('p');
+                            break;
+                        case S_IFREG:
+                            putchar('-');
+                            break;
+                        case S_IFDIR:
+                            putchar('d');
+                            break;
+                        case S_IFLNK:
+                            putchar('l');
+                            break;
+                        case S_IFSOCK:
+                            putchar('s');
+                            break;
+                        default:
+                            putchar('?');
+                            break;
+                    }
+                    
+                    for (int i = 0; i < 9; ++i)
+                        putchar(finfo.st_mode & modes[i] ? "rwx"[i % 3] : '-');
+                            
+                    printf("%ju ", (uintmax_t)finfo.st_nlink);
+
+                    if ((pwd = getpwuid(finfo.st_uid)) != NULL)
+                        printf("%s ", pwd->pw_name);    
+                    else
+                        printf("%ju ", (uintmax_t)finfo.st_uid);
+
+                    if ((grp = getgrgid(finfo.st_gid)) != NULL)
+                        printf("%s ", grp->gr_name);    
+                    else
+                        printf("%ju ", (uintmax_t)finfo.st_gid);
+                                
+                    printf("%jd ", (intmax_t)finfo.st_size);
+                
+                    ptm = localtime(&finfo.st_mtim.tv_sec);
+                    strftime(buf, 32, "%b %2e %Y %H:%M ", ptm);
+                    printf("%s ", buf);
+                    printf("%s\n", argv[i]);
+                }
+
+                return 0;
+            }
+
+            void exit_sys(const char *msg)
+            {
+                perror(msg);
+
+                exit(EXIT_FAILURE);
+            }
+
+    Diğer yandan POSIX dünyasında bütün kullanıcıların bilgilerini elde edebilmek için de bir takım fonksiyonlar bulundurulmuştur. Bu fonksiyonlar ise şunlardır;
+
+        "setpwent", "getpwent" ve "endpwent" ile "setgrent", "getgrent" ve "endgrent"
+    
+    isimli fonksiyonlardır. Bunlardan, 
+        >>> "setpwent", "getpwent" ve "endpwent" : Bu grup fonksiyonlar, "/etc/passwd" dosyasındaki bütün kullanıcıların bilgilierini elde etmek için kullanılır. Fonksiyonların prototipleri aşağıdaki gibidir:
+
+            #include <pwd.h>
+            void setpwent(void);
+            struct passwd *getpwent(void);
+            void endpwent(void);
+
+        Fonksiyonlardan ilk önce "setpwent" işin başında çağrılır. Bir nevi "init." işlemi gibi. Daha sonra bir döngü içerisinde "getpwent" çağrılır ve böylelikle kullanıcılara ait bilgiler her bir döngü sonunda 
+        "struct passwd" ile elde edilir. Dosyanına sonuna gelindiğinde ise "getpwent" çağrısı, "NULL" ile geri döner. Ancak herhangi bir hata durumunda yine "NULL" ile geri döner ve "errno" değişkenini de uygun
+        değere çeker. Dolaysıyla döngünün her turunda "errno" değişkenini sıfıra çekmeliyiz. İşimiz bittikten sonra da sonlandırma işlemleri için "endpwent" çağrılmalıdır.
+            * Örnek 1, Aşağıdaki örnekte sistemdeki tüm kullanıcıların listesi yazdırılmıştır. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <errno.h>
+                #include <pwd.h>
+
+                void exit_sys(const char *msg);
+
+                int main(void)
+                {
+                    struct passwd *pwd;
+
+                    setpwent();
+                
+                    while (errno = 0, (pwd = getpwent()) != NULL) 
+                        printf("%s\n", pwd->pw_name);
+
+                    if (errno != 0)
+                        exit_sys("getpwent");
+
+                    endpwent();
+
+                    return 0;    
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "setgrent", "getgrent" ve "endgrent" : Bu grup fonksiyonlar, "/etc/group" dosyasındaki bütün kullanıcıların bilgilierini elde etmek için kullanılır. Fonksiyonların prototipleri aşağıdaki gibidir:
+
+            #include <grp.h>
+            void setgrent(void);
+            struct group *getgrent(void);
+            void endgrent(void);
+
+        Yine işin başında, "init." amacıyla, "setgrent" çağrılır. Sonrasında bir döngü ile "getgrent" çağrılır. İşin sonunda ise "endgrent" çağrılır. Pekala "errno" değişkeni de "getgrent" döngüsünün her turunun 
+        başında yine sıfıra çekilir ki hatanın nedenini görebilelim. 
+            * Örnek 1, Aşağıdaki örnekte sistemdeki tüm grup isimleri yazdırılmıştır.
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <errno.h>
+                #include <grp.h>
+
+                void exit_sys(const char *msg);
+
+                int main(void)
+                {
+                    struct group *grp;
+
+                    setgrent();
+                
+                    while (errno = 0, (grp = getgrent()) != NULL) 
+                        printf("%s\n", grp->gr_name);
+
+                    if (errno != 0)
+                        exit_sys("getgrent");
+
+                    endgrent();
+
+                    return 0;    
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+
+                    exit(EXIT_FAILURE);
+                }

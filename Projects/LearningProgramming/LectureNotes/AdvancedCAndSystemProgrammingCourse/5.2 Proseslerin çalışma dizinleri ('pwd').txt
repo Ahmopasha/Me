@@ -1,0 +1,830 @@
+> Proseslerin Çalışma Dizinleri: İşletim sistemlerinde bir dosyanın yerini belirten yazısal ifadelere "yol ifadeleri (path names)" denilmektedir.
+Yol ifadelerinde dizin geçişleri kullanılabilir. Windows sistemlerinde dizin geçişleri için "\" karakteri UNIX/Linux ve macOS sistemlerinde ise
+"/" karakteri kullanılmaktadır. Bir yol ifadesindeki "/" ya da "\" arasındaki her bir dizin girişine "yol ifadesi bileşeni (pathname component)"
+denilmektedir. Örneğin:
+
+    "/home/kaan/Study/test.txt"
+
+Burada "home", "kaan", "Study", "test.txt" birer yol ifadesi girişidir. Windows sistemlerinde "sürücü (drive)" kavramı da vardır. Bu sistemlere
+her sürücünün ayrı bir kökü bulunmaktadır. Dolayısıyla yol ifadelerinde sürücüler de belirtilebilmektedir. Örneğin:
+
+    "F:\Dropbox\Study\test.txt"
+
+Halbuki UNIX/Linux sistemlerinde ve macOS sistemlerinde sürücü kavramı yoktur. Bu sistemlerde tek bir kök vardır. Başka aygıtlar bu kökte 
+herhangi bir yere monte edilirler. Bu işleme İngilizce "mount" denilmektedir. Mount işleminin yapıldığı dizin artık mount edilen aygıtın 
+kök dizini gibi işlem görmektedir. Yol ifadeleri "mutlak (absolute)" ve "göreli (relative)" olmak üzere ikiye ayrılmaktadır. Eğer bir yol
+ifadesinin ilk karakteri "/" ya da "\" ise bu tür yol ifadelerine mutlak yol ifadeleri denilmektedir. Örneğin:
+
+    "/home/kaan/Study/test.txt"
+
+Bu yol ifadesi UNIX/Linux sistemlerinde mutlak bir yol ifadesidir. Örneğin:
+
+    "\Windows\notepad.exe"
+
+Bu yol ifadesi de Windows sistemleri için mutlak bir yol ifadesidir. Mutlak yol ifadeleri her zaman kök dizinden itibaren yer belirtirler. Eğer yol
+ifadelerindeki ilk karakter "/" ya da "\" değilse böyle yol ifadelerine de "göreli yol ifadeleri" denilmektedir. Örneğin:
+
+    "Study/C/test.txt"
+    "Doc\Temp\test.txt"
+    "samle.c"
+
+Bu yol ifadeleri görelidir. İşletim sistemleri her proses için prosesin kontrol bloğu içerisinde ismine "prosesin çalışma dizini (process current
+working directory)" denilen bir dizin tutmaktadır. İşte göreli yol ifadeleri prosesin çalışma dizini orijin yapılarak çözülmektedir. Yani prosesin
+çalışma dizini göreli yol ifadelerinin nereden itibaren yol ifadesi belirttiğini göstermektedir. Pekiyi prosesin çalışma dizini proses yaratıldığında
+hangi dizin olarak set edilmiştir ve program çalışırken değiştirilebilir mi? İşte UNIX/Linux sistemlerinde bir proses yaratıldığında (yani bir program
+çalıştırıldığında) onun çalışma dizini üst prosesten (yani onu çalıştıran prosesten) alınmaktadır. Örneğin "sample" programının çalışma dizini
+"/home/kaan" olsun. "sample" programı da  "mample" programını çalıştırmış olsun. O halde işin başında "mample" programının çalışma dizini de
+"home/kaan" olacaktır. Windows sistemlerinde de bir proses yaratıldığında yeni prosesin çalışma dizini ya onu yaratan prosesin çalışma dizini olarak
+üst prosesten alınır ya da istenilen bir dizin olarak set edilir. Tabii Windows sistemlerinde prosesin çalışma dizini sürücü bilgisini de içermektedir. 
+Windows sistemlerinde bir yol ifadesinde sürücü bilgisi de varsa buna "tam yol ifadesi (full path)" denilmektedir. Örneğin:
+
+    "C:\Windows\temp\x.txt"
+
+Pekiyi bu sistemlerde mutlak bir yol ifadesi sürücü içermezse default sürücü ne olacaktır? Örneğin:
+
+    "\temp\test.txt"
+
+Bu mutlak ifadesi hangi sürücünün kök dizininden itibaren yer belirtmektedir? İşte Windows sistemlerinde sürücüsü belirtilmemiş olan yol mutlak yol
+ifadeleri prosesin çalışma dizini hangi sürücüye ilişkinse o sürücüde yer beelirtmektedir. Örneğin prosesimizin çalışma dizini "F:\Dropbox"ise
+yukarıdaki yol ifadesi F sürücüsüün kökünden itibaren yer belirtmektedir. Eğer prosesimizin çalışma dizini örneğin "D:\Ali\Study" olsaydı yukarıdaki
+yol ifadesi D dizinin kökünden itibaren yer belirtecekti. Windows sistemlerinde bir yol ifadesinde sürücü varsa ancak yoli fadesi göreli ise bu durumda
+proseste bazı özel çevre değişkenlerine bakılmaktadır. Eğer bu çevre değişkenleri yoksa bu duurmda ilgili sürücünün kök dizini orijin kabul edilmektedir.
+Örneğin:
+
+    "D:Ali\test.txt"
+
+Burada yol ifadesinde sürücü belirtilmiştir. Ancak yol ifadesi görelidir. İşte bu durumda orijin noktası için bazı çevre değişkenlerine bakılır. Ancak bu
+çevre değişkenleri yoksa bu yol ifadesi "D:\Ali\test.txt" ile eşdeğer kabul edilir. Tabii programcının böylesi yol ifadelerinden kaçınması daha uygun olur. 
+Proseslerin Çalışma Dizinlerinin elde edilmesi ve değiştirilmesi için bir takım fonksiyonlar kullanılır. Bu fonksiyonlar Windows sistemleri için 
+
+    GetCurrentDirectory
+    SetCurrentDirectory
+
+isimli fonksiyonlarken, UNIX/Linux Sistemleri için
+
+    getcwd
+    chdir
+
+fonksiyonlar kullanılır. Şimdi de bu fonksiyonları sırasıyla inceleyelim:
+    >> Windows API : 
+        >>> "GetCurrentDirectory" : Windows sistemlerinde prosesin çalışma dizini (current working directory) GetCurrentDirectory API fonksiyonuyla elde
+        edilmektedir. Fonksiyonun prototipi şöyledir:
+
+            DWORD GetCurrentDirectory(
+                DWORD  nBufferLength,
+                LPTSTR lpBuffer
+            );
+
+        Fonksiyonun ikinci parametresi prosesin çalışma dizininin yerleştirileceği char türden dizinin başlangıç adresini almaktadır. Birinci parametre
+        bu dizinin uzunluğunu belirtmektedir. Fonksiyon başarısızlık durumunda 0 değerine geri dönmektedir. Ancak programcının fonksiyona verdiği dizinin
+        uzunluğu yetersiz kalırsa fonksiyon diziye yerleştirme yapmaz fakat geri dönüş değeri olarak null karakter dahil olmak üzere gereken dizi uzunluğunu
+        verir. Fonksiyon başarı durumunda diziye yerleştirilen karakter sayısına geri dönmektedir. Ancak başarı durumundaki bu karakter sayısına null karakter
+        dahil değildir. Eğer fonksiyonunun birinci parametresi 0 ve ikinci parametresi NULL adres geçilirse fonksiyon prosesin çalışma dizininin
+        yerleştirilmesi için gereken karakter sayısını (null karakter dahil olmak üzere) bize vermektedir.  Windows sistemlerinde bir yol ifadesinin maksimum
+        uzunluğu MAX_PATH değeri ile önceden belirlenmiştir. Bu tür durumlarda dizi uzunluklarını MAX_PATH kadar açınız. MAX_PATH mevcut Windows sistemlerinde
+        260 olarak define edilmiştir. GetCurrentDirectory fonksiyonunun başarısı aşağıdaki gibi kontrol edilebilir:
+
+            char cwd[BUFFER_SIZE];
+            DWORD dwResult;
+
+            if (!(dwResult = GetCurrentDirectory(BUFFER_SIZE, cwd)))
+                ExitSys("GetCurrentDirectory");
+
+            if (dwResult > BUFFER_SIZE) {
+                fprintf(stderr, "Buffer too small!..\n");
+                exit(EXIT_FAILURE);
+            }
+
+        Aşağıdaki örnekte prosesin çalışma dizini elde edilip yazdırılmıştır. Burada MAX_PATH değeri kullanıldığı için alanın yeterli büyüklükte olup olmadığı
+        ayrıca kontrol edilmemiştir.
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    char cwd[MAX_PATH];
+
+                    if (!GetCurrentDirectory(MAX_PATH, cwd))
+                        ExitSys("GetCurrentDirectory");
+
+                    puts(cwd);
+
+                    return 0;
+                }
+
+                void ExitSys(LPCSTR lpszMsg)
+                {
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr;
+
+                    if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                        fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+            * Örnek 2, GetCurrentDirectory fonksiyonunda birinci parametre 0, ikinci parametre NULL geçilirse çalışma dizini için gereken karakter uzunluğu
+            (byte değil) elde edilir. Aşağıdaki örnekte bu yöntem kullanılmıştır.
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    char *cwd;
+                    DWORD dwBufSize;
+
+                    if (!(dwBufSize = GetCurrentDirectory(0, NULL)))
+                        ExitSys("GetCurrentDirectory");
+
+                    if ((cwd = (char *)malloc(dwBufSize)) == NULL) {
+                        fprintf(stderr, "cannot allocate memory!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if (!GetCurrentDirectory(dwBufSize, cwd))
+                        ExitSys("GetCurrentDirectory");
+
+                    puts(cwd);
+
+                    free(cwd);
+
+                    return 0;
+                }
+
+                void ExitSys(LPCSTR lpszMsg)
+                {
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr;
+
+                    if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                        fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "SetCurrentDirectory" : Windows sistemlerinde prosesin çalışma dizinini değiştirmek için SetCurrentDirectory isimli API fonksiyonu kullanılmaktadır.
+        Fonksiyonun prototipi şöyledir:
+
+            BOOL SetCurrentDirectory(
+                LPCTSTR lpPathName
+            );
+
+        Fonksiyon set edilecek çalışma dizinini parametre olarak alır. Başarı durumunda 0, başarısızlık durumunda sıfır dışı bir değere geri döner. Aşağıdaki
+        örnekte önce prosesin çalışma dizini SetCurrentDirectory API fonksiyonu ile "C:\windows" olarak değiştirilmiştir. Sonra prosesin çalışma dizini yine
+        GetCurrentDirectory API fonksiyonu ile alınıp yazdırılmıştır.
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    char cwd[MAX_PATH];
+                    DWORD dwResult;
+
+                    if (!SetCurrentDirectory("c:\\windows"))
+                        ExitSys("SetCurrentDirectory");
+
+                    if (!(dwResult = GetCurrentDirectory(MAX_PATH, cwd)))
+                        ExitSys("GetCurrentDirectory");
+
+                    puts(cwd);
+
+                    return 0;
+                }
+
+                void ExitSys(LPCSTR lpszMsg)
+                {
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr;
+
+                    if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastErr,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                        fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+    Aşağıda ise bu iki fonksiyon kullanılarak oluşturulan basit bir shell uygulaması verilmiştir:
+        * Örnek 1,
+            #include <stdio.h>
+            #include <string.h>
+            #include <windows.h>
+
+            #define MAX_CMD_LINE			4096
+            #define MAX_CMD_PARAMS			64
+
+            struct CMD {
+                char *cmd_text;
+                void (*proc)(void);
+            };
+
+            void ExitSys(LPCSTR lpszMsg);
+            void ParseCmdLine(void);
+            void DirProc(void);
+            void CopyProc(void);
+            void ClsProc(void);
+            void RenameProc(void);
+            void ChangeDirProc(void);
+            void DispDirectory(LPCTSTR lpszPath);
+
+            char g_cmd_line[MAX_CMD_LINE];
+            struct CMD g_cmds[] = {
+                {"dir", DirProc},
+                {"copy", CopyProc},
+                {"cls", ClsProc},
+                {"rename", RenameProc},
+                {"cd", ChangeDirProc},
+                {NULL, NULL},
+            };
+            char *g_params[MAX_CMD_PARAMS];
+            int g_nparams;
+            char g_cwd[MAX_PATH];
+
+            int main(void)
+            {
+                char *str;
+                int i;
+
+                if (!GetCurrentDirectory(MAX_PATH, g_cwd))
+                    ExitSys("GetCurrentDirectory");
+
+                for (;;) {
+                    printf("%s>", g_cwd);
+                    fgets(g_cmd_line, MAX_CMD_LINE, stdin);
+                    if ((str = strchr(g_cmd_line, '\n')) != NULL)
+                        *str = '\0';
+
+                    ParseCmdLine();
+                    if (g_nparams == 0)
+                        continue;
+                    if (!strcmp(g_params[0], "exit"))
+                        break;
+                    for (i = 0; g_cmds[i].cmd_text != NULL; ++i)
+                        if (!strcmp(g_cmds[i].cmd_text, g_params[0])) {
+                            g_cmds[i].proc();
+                            break;
+                        }
+                    if (g_cmds[i].cmd_text == NULL)
+                        printf("command not found: %s\n\n", g_params[0]);
+                }
+
+                return 0;
+            }
+
+            void ParseCmdLine(void)
+            {
+                char *str;
+
+                g_nparams = 0;
+                for (str = strtok(g_cmd_line, " \t"); str != NULL; str = strtok(NULL, " \t"))
+                    g_params[g_nparams++] = str;
+                g_params[g_nparams] = NULL;
+            }
+
+            void DirProc(void)
+            {
+                if (g_nparams > 2) {
+                    printf("too many arguments!..\n");
+                    return;
+                }
+
+                DispDirectory(g_nparams == 1 ? g_cwd : g_params[1]);
+            }
+
+            void CopyProc(void)
+            {
+                if (g_nparams != 3) {
+                    printf("argument too few or too many!..\n\n");
+                    return;
+                }
+            }
+
+            void ClsProc(void)
+            {
+                if (g_nparams != 1) {
+                    printf("too many arguments!\n\n");
+                    return;
+                }
+                printf("cls command\n");
+            }
+
+            void RenameProc(void)
+            {
+                printf("rename command\n");
+            }
+
+            void ChangeDirProc(void)
+            {
+                if (g_nparams > 2) {
+                    printf("too many arguments!..\n\n");
+                    return;
+                }
+
+                if (g_nparams == 1) {
+                    printf("%s\n\n", g_cwd);
+                    return;
+                }
+
+                if (!SetCurrentDirectory(g_params[1])) {
+                    printf("directory not found or cannot change: %s\n\n", g_params[1]);
+                    return;
+                }
+
+                if (!GetCurrentDirectory(MAX_PATH, g_cwd))
+                    ExitSys("GetCurrentDirectory");
+            }
+
+            void DispDirectory(LPCTSTR lpszPath)
+            {
+                WIN32_FIND_DATA wfd;
+                char lpszDirPath[MAX_PATH];
+                HANDLE hFF;
+
+                sprintf(lpszDirPath, "%s/*.*", lpszPath);
+                if ((hFF = FindFirstFile(lpszDirPath, &wfd)) == INVALID_HANDLE_VALUE) {
+                    printf("directory not found or cannot display!\n\n");
+                    return;
+                }
+
+                do {
+                    if (wfd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                        printf("%-10s", "<DIR>");
+                    else
+                        printf("%-10lu", wfd.nFileSizeLow);
+
+                    printf("%s\n", wfd.cFileName);
+                } while (FindNextFile(hFF, &wfd));
+
+                printf("\n");
+            }
+
+            void ExitSys(LPCSTR lpszMsg)
+            {
+                DWORD dwLastError = GetLastError();
+                LPTSTR lpszErr;
+
+                if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwLastError,
+                    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpszErr, 0, NULL)) {
+                    fprintf(stderr, "%s: %s", lpszMsg, lpszErr);
+                    LocalFree(lpszErr);
+                }
+
+                exit(EXIT_FAILURE);
+            }
+
+    >> UNIX/Linux : 
+        >>> "getcwd" : UNIX/Linux sistemlerinde prosesin çalışma dizini getcwd isimli POSIX fonksiyonuyla elde edilmektedir. Fonksiyonun prototipi şöyledir:
+
+            #include <unistd.h>
+            char *getcwd(char *buf, size_t size);
+
+        Fonksiyonun birinci prosesin çalışma dizininin yerleştirileceği dizinin adresini, ikinci parametresi ise onun null karakter dahil olmak üzere uzunluğunu
+        almaktadır. Eğer yol ifadesi belirtilen uzunluktan null karakter dahil olmak üzere büyükse fonksiyon başarısız olur. Fonksiyon başarı durumunda birinci
+        parametresiyle belirtilen adresin aynısına, başarısızlık durumunda NULL adrese geri dönmektedir. UNIX/Linux sistemlerinde yol ifadelerinin maksimum
+        değerleri <limits.h> içerisinde bildirilmiş olan PATH_MAX isimli bir sembolik sabitle ifade edilmektedir. Ancak bu sembolik sabitin define edilmiş olma
+        zorunluluğu yoktur. Eğer bu sembolik sabit define edilmemişse bu durumda maksimum yol ifadesinin uzunluğu pathconf isimli POSIX fonksiyonuyla elde
+        edilmektedir. Linux'ta PATH_MAX sembolik sabiti 4096 olarak define edilmiştir. Aşağıdaki örnekte prosesin çalışma dizini getcwd fonksiyonuyla alınp
+        stdout dosyasına yazdırılmıştır. 
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <unistd.h>
+
+                void exit_sys(const char *msg);
+
+                int main(void)
+                {
+                    char cwd[4096];
+
+                    if (getcwd(cwd, 4096) == NULL)
+                        exit_sys("getcwd");
+
+                    puts(cwd);
+
+                    return 0;
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "chdir" : UNIX/Linux sistemlerinde proseslerin çalışma dizinini değiştirmek için chdir isimli POSIX fonksiyonu kullanılmaktadır. Fonksiyonun
+        prototipi şöyledir:
+
+            #include <unistd.h>
+            int chdir(const char *path);
+
+        Fonksiyon çalışma dizini yapılacak dizin'in yol ifadesini parametre olarak alır. Başarı durumunda 0 değerine, başarısızlık durumunda -1 değerine geri
+        döner. Aşağıdaki örnekte önce prosesin çalışma dizini alınarak ekrana (stdout dosyasına) yazdırılmıştır. Sonra çalışma değiştirilip yeniden elde edilip
+        yazdırılmıştır.
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <unistd.h>
+
+                void exit_sys(const char *msg);
+
+                int main(void)
+                {
+                    char cwd[4096];
+
+                    if (getcwd(cwd, 4096) == NULL)
+                        exit_sys("getcwd");
+
+                    puts(cwd);
+
+                    if (chdir("/usr/include") == -1)
+                        exit_sys("getcwd");
+
+                    if (getcwd(cwd, 4096) == NULL)
+                        exit_sys("getcwd");
+
+                    puts(cwd);
+
+                    return 0;
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+                    exit(EXIT_FAILURE);
+                }
+
+    Aşağıdaki örnekte daha önce UNIX/Linux sistemleri için yapmış olduğumuz "myshell" programına pwd, cd, ls ve clear komutları eklenmiştir. 
+	Programda yine myshell programı kendi çalışma dizininin prompt olarak ekran basmaktadır. cd komutu da çalışma dizinini değiştirmektedir. 
+	Normal olarak UNIX/Linux sistemlerinde cd komutu argüman almazsa çalışma dizinini "home dizin" olarak değiştirmektedir. Ancak aşağıdaki 
+	örnekte biz bu özelliği sağlamıyoruz.
+        * Örnek 1,
+            /* myshell.c */
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <string.h>
+                #include <time.h>
+                #include <math.h>
+                #include <errno.h>
+                #include <fcntl.h>
+                #include <unistd.h>
+                #include <sys/stat.h>
+                #include <dirent.h>
+                #include <pwd.h>
+                #include <grp.h>
+
+                #define MAX_CMD_LINE            4096
+                #define MAX_CMD_PARAMS          128
+                #define BUFFER_SIZE             8192
+                #define MAX_PATH_SIZE           4096
+
+                void parse_cmdline(void);
+                void cat_cmd(void);
+                void cp_cmd(void);
+                void rename_proc(void);
+                void pwd_proc(void);
+                void cd_proc(void);
+                void ls_proc(void);
+                void clear_proc(void);
+
+                const char *get_ls(const char *path, int hlink_digit, int uname_digit, int gname_digit, int size_digit);
+                void exit_sys(const char *msg);
+
+                typedef struct tagCMD {
+                    char *cmd_name;
+                    void (*cmd_proc)(void);
+                } CMD;
+
+                char g_cmdline[MAX_CMD_LINE];
+                char *g_params[MAX_CMD_PARAMS];
+                int g_nparams;
+                CMD g_cmds[] = {
+                    {"cat", cat_cmd}, 
+                    {"cp", cp_cmd}, 
+                    {"rename", rename_proc},
+                    {"pwd", pwd_proc},
+                    {"cd", cd_proc},
+                    {"ls", ls_proc},
+                    {"clear", clear_proc},
+                    {NULL, NULL}
+                };
+                char g_cwd[MAX_PATH_SIZE];
+
+                int main(void)
+                {    
+                    char *str;
+                    int i;
+
+                    if (getcwd(g_cwd, MAX_PATH_SIZE) == NULL)
+                        exit_sys("getcwd");
+
+                    for (;;) {
+                        printf("CSD:%s>", g_cwd);
+                        if (fgets(g_cmdline, MAX_CMD_LINE, stdin) == NULL)
+                            continue;
+                        if ((str = strchr(g_cmdline, '\n')) != NULL)
+                            *str = '\0';
+                        parse_cmdline(); 
+                        if (g_nparams == 0)  
+                            continue;
+                        if (!strcmp(g_params[0], "exit"))
+                            break;
+
+                        for (i = 0; g_cmds[i].cmd_name != NULL; ++i)
+                            if (!strcmp(g_cmds[i].cmd_name, g_params[0])) {
+                                g_cmds[i].cmd_proc();
+                                break;
+                            }
+                        if (g_cmds[i].cmd_name == NULL) {
+                            printf("invalid command: %s\n", g_params[0]);
+                        }
+                    }
+
+                    return 0;
+                }
+
+                void parse_cmdline(void)
+                {
+                    char *str;
+
+                    g_nparams = 0;
+                    for (str = strtok(g_cmdline, " \t"); str != NULL; str = strtok(NULL, " \t"))
+                        g_params[g_nparams++] = str;
+                    g_params[g_nparams] = NULL;
+                }
+
+                void cat_cmd(void)
+                {
+                    FILE *f;
+                    int ch;
+
+                    if (g_nparams != 2) {
+                        printf("cat command missing file!..\n");
+                        return;
+                    }
+                    if ((f = fopen(g_params[1], "r")) == NULL) {
+                        printf("file not found or cannot open file: %s\n", g_params[1]);
+                        return;
+                    }
+                    while ((ch = fgetc(f)) != EOF)
+                        putchar(ch);
+                    
+                    if (ferror(f))
+                        printf("cannot read file: %s\n", g_params[1]);
+                    
+                    fclose(f);
+                }
+
+                void cp_cmd(void)
+                {
+                    int fds, fdd;
+
+                    char buf[BUFFER_SIZE];
+                    ssize_t result;
+
+                    if (g_nparams != 3) {
+                        printf("source and destination path must be specified!..\n");
+                        return;
+                    }
+                    if ((fds = open(g_params[1], O_RDONLY)) == -1) {
+                        printf("file not found or cannot open: %s\n", g_params[1]);
+                        return;
+                    }
+                    if ((fdd = open(g_params[2], O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH)) == -1) {
+                        printf("file not found or cannot open: %s\n", g_params[2]);
+                        goto EXIT2;
+                    }
+
+                    while ((result = read(fds, buf, BUFFER_SIZE)) > 0)
+                        if (write(fdd, buf, result) != result) {
+                            printf("cannot write file: %s\n", g_params[2]);
+                            goto EXIT1;
+                        }
+
+                    if (result == -1) {
+                        printf("cannot read file: %s\n", g_params[1]);
+                        goto EXIT1;
+                    }
+
+                    printf("1 file copied...\n");
+                            
+
+                EXIT1:
+                    close(fdd);
+                EXIT2:
+                    close(fds);
+                }
+
+                void rename_proc(void)
+                {
+                    printf("rename command...\n");
+                }
+
+                void pwd_proc(void)
+                {
+                    puts(g_cwd);
+                }
+
+                void cd_proc(void)
+                {
+                    if (g_nparams == 1) {
+                        printf("argument missing!..\n");
+                        return;
+                    }
+
+                    if (g_nparams > 2) {
+                        printf("too many arguments!..\n");
+                        return;
+                    }
+
+                    if (chdir(g_params[1]) == -1) {
+                        printf("%s: %s!..\n", g_params[1], strerror(errno));
+                        return;
+                    }
+
+                    if (getcwd(g_cwd, MAX_PATH_SIZE) == NULL)
+                        exit_sys("getcwd");
+                }
+
+                #include <sys/wait.h>
+
+                void ls_proc(void)
+                {
+                    int result;
+                    int l_flag;
+                    int hlink_digit, uname_digit, gname_digit, size_digit;
+                    DIR *dir;
+                    struct dirent *dent;
+                    char path[PATH_MAX];
+                    struct stat finfo;
+                    int len;
+                    struct passwd *pass;
+                    struct group *gr;
+                    char *target_path;
+
+                    l_flag = 0;
+                    opterr = 0;
+                    optind = 0;
+
+                    while ((result = getopt(g_nparams, g_params, "l")) != -1) {
+                        switch (result) {
+                            case 'l':
+                                l_flag = 1;
+                                break;
+                            case '?':
+                                printf("invalid option: -%c\n", optopt);
+                                break;
+                        }
+                    }
+
+                    if (g_nparams - optind > 1) {
+                        printf("too many arguments!..\n");
+                        return;
+                    }
+
+                    target_path = optind == g_nparams ? "." : g_params[optind];
+                        
+                    if ((dir = opendir(target_path)) == NULL) {
+                        printf("%s: %s\n", target_path, strerror(errno));
+                        return;
+                    }
+
+                    hlink_digit = uname_digit = gname_digit = size_digit = 0;
+
+                    while (errno = 0, (dent = readdir(dir)) != NULL) {
+                        snprintf(path, PATH_MAX, "%s/%s", target_path, dent->d_name);
+                        if (stat(path, &finfo) == -1) {
+                            printf("%s: %s\n", path, strerror(errno));
+                            continue;
+                        }
+
+                        len = (int)log10(finfo.st_nlink) + 1;
+                        if (len > hlink_digit)
+                            hlink_digit = len;
+
+                        if ((pass = getpwuid(finfo.st_uid)) == NULL)
+                            exit_sys("getppuid");
+
+                        len = (int)strlen(pass->pw_name);
+                        if (len > uname_digit)
+                            uname_digit = len;
+
+                        if ((gr = getgrgid(finfo.st_gid)) == NULL)
+                            exit_sys("getgrgid");
+
+                        len = (int)strlen(gr->gr_name);
+                        if (len > gname_digit)
+                            gname_digit = len;
+
+                        len = (int)log10(finfo.st_size) + 1;
+                        if (len > size_digit)
+                            size_digit = len;
+                    }
+
+                    if (errno != 0) 
+                        exit_sys("readdir");
+
+                    rewinddir(dir);
+                    while (errno = 0, (dent = readdir(dir)) != NULL) {
+                        sprintf(path, "%s/%s", target_path, dent->d_name);
+                        if (stat(path, &finfo) == -1) {
+                            printf("%s: %s\n", path, strerror(errno));
+                            continue;
+                        }
+
+                        if (l_flag)
+                            printf("%s\n", get_ls(path, hlink_digit, uname_digit, gname_digit, size_digit));
+                        else
+                            printf("%s\t", dent->d_name);
+                    }
+
+                    if (errno != 0)
+                        exit_sys("readdir");
+
+                    if (!l_flag)
+                        putchar('\n');
+
+                    closedir(dir);
+                }
+
+                void clear_proc(void)
+                {
+                    printf("\033[2J");
+                    printf("\033[0;0f");
+                }
+
+                const char *get_ls(const char *path, int hlink_digit, int uname_digit, int gname_digit, int size_digit)
+                {
+                    struct stat finfo;
+                    static char buf[4096];
+                    static mode_t modes[] = { S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH };
+                    struct passwd *pass;
+                    struct group *gr;
+                    char *str;
+                    int index = 0;
+                    int i;
+
+                    if (stat(path, &finfo) == -1)
+                        return NULL;
+
+                    if (S_ISREG(finfo.st_mode))
+                        buf[index] = '-';
+                    else if (S_ISDIR(finfo.st_mode))
+                        buf[index] = 'd';
+                    else if (S_ISCHR(finfo.st_mode))
+                        buf[index] = 'c';
+                    else if (S_ISBLK(finfo.st_mode))
+                        buf[index] = 'b';
+                    else if (S_ISFIFO(finfo.st_mode))
+                        buf[index] = 'p';
+                    else if (S_ISLNK(finfo.st_mode))
+                        buf[index] = 'l';
+                    else if (S_ISSOCK(finfo.st_mode))
+                        buf[index] = 's';
+                    ++index;
+
+                    for (i = 0; i < 9; ++i)
+                        buf[index++] = (finfo.st_mode & modes[i]) ? "rwx"[i % 3] : '-';
+                    buf[index] = '\0';
+
+                    index += sprintf(buf + index, " %*llu", hlink_digit, (unsigned long long)finfo.st_nlink);
+
+                    if ((pass = getpwuid(finfo.st_uid)) == NULL)
+                        return NULL;
+                    index += sprintf(buf + index, " %-*s", uname_digit, pass->pw_name);
+
+                    if ((gr = getgrgid(finfo.st_gid)) == NULL)
+                        return NULL;
+                    index += sprintf(buf + index, " %-*s", gname_digit, gr->gr_name);
+
+                    index += sprintf(buf + index, " %*lld", size_digit, (long long)finfo.st_size);
+                    index += strftime(buf + index, 100, " %b %e %H:%M", localtime(&finfo.st_mtime));
+
+                    str = strrchr(path, '/');
+                    sprintf(buf + index, " %s", str ? str + 1 : path);
+
+                    return buf;
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+
+                    exit(EXIT_FAILURE);
+                }

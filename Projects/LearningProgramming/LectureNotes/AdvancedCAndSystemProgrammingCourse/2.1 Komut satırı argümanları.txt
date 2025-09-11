@@ -1,0 +1,1294 @@
+> Programın Komut Satırı Argümanları: Komut satırından bir programrama argüman geçmek için kullanılan argümanlardır. Fakat Windows
+gibi pencereli ortamlardan bir programı çalıştırırken de argümanları geçebiliriz. Fakat Windows sistemler pencereli  ortamlar
+kullanırken, UNIX/Linux sistemler ağırlıklı olarak komut satırını kullanmaktadır. Dolayısıyla UNIX/Linux sistemlerdeki temel komut
+satırı argümanlarını bilmemiz ÇOK ÖNEMLİDİR. Öte yandan bir programa geçtiğimiz argümanlar, o programın "main" fonksiyonunun "argc"
+ve "argv" isimli parametreleri üzerinden aktarılır. Buradaki isimlendirme bir koşul değil, gelenektir. C standartlarına göre "main"
+fonksiyonunun parametrik yapısı iki biçimdedir; "void" parametreli veya "int" ve "char**" parametreli. Fakat standartlar bu iki biçimi
+zorunlu KILMAMIŞTIR, ilgili derleyiciye yazan kişilere de başka biçimler oluşturmasına imkan kılmıştır. Fonksiyonun geri dönüş değeri
+de "int" türden olmalıdır, standartlar bunu zorunlu KILMIŞTIR. Diğer yandan bu "main" fonksiyonu bir "entry-point" olarak görülmektedir.
+Yani programın akışı ilk olarak bu "main" programından başlamaktadır. Diğer yandan "main" fonksiyonunun ikinci parametresinin son elemanı
+ise "NULL" değerinde bir gösterici olmalıdır. C standartları bunu garanti altına almışlardır. Buradan hareketle "argv[argc]" ifadesinin
+değeri "NULL" olacaktır. Yine unutmamalıyız ki "argv" dizisinin ilk elemanı program ismidir. Bir diğer husus da komut satırına 
+geçtiğimiz argümanların sonuna "\0" karakterinin eklenmesidir. Dolayısıyla bu argümanları işlerken bu hususa da dikkat etmeliyiz. 
+Pekiyi komut satırına geçtiğimiz argümanlar nasıl "main" fonksiyonuna geçilmekte? Aslında burada ilgili "shell" programı devreye 
+giriyor. 
+    * Örnek 1, Komut Satırı Argümanlarının ekrana basılması:
+        #include <stdio.h>
+        #include <stdlib.h>
+
+        int main(int argc, char** argv)
+        {
+            /*
+                # OUTPUT #
+                0. Index: D:\CSD\SysProg-1\src\CFunctions\x64\Debug\CFunctions.exe
+                1. Index: Ahmet
+                2. Index: Kandemir
+                3. Index: Pehlivanli
+            */
+
+            for (int i = 0; i < argc; ++i)
+            {
+                printf("%d. Index: %s\n", i, argv[i]);
+            }
+
+            return 0;
+        }
+
+    * Örnek 2, Aşağıdaki örnekte ise klavyeden girilen yazı bir diziye yerleştirilmiştir. 
+        #include <stdio.h>
+        #include <string.h>
+
+        #define MAX_CMD_LINE    4096
+        #define MAX_ARGV        1024
+
+        int main(void)
+        {
+            /*
+                # OUTPUT #
+            */
+
+            char cmd_line[MAX_CMD_LINE];
+            fgets(cmd_line, MAX_CMD_LINE, stdin);
+
+            char* argv[MAX_ARGV];
+            int argc = 0;
+            for (char* buffer = strtok(cmd_line, " \t"); buffer != NULL; buffer = strtok(NULL, " \t"))
+                argv[argc++] = buffer;
+            argv[argc] = NULL;
+
+            printf("Arguments: ");
+            for (int i = 0; i < argc; ++i)
+                printf("%s ", argv[i]);
+
+
+            return 0;
+        }
+
+Komut satırı argümanlarındaki bir diğer kavram ise seçenek kavramıdır. Yani argümanların seçeneklendirilmesi mevzusudur. Örneğin,
+UNIX/Linux türevi sistemlerde "ls" komutunun "-l" seçeneği vardır. Bu seçenek kullanıldığında ilgili komutun davranışı da değişmektedir. 
+Benzer bir husus Windows sistemlerinde de vardır. Fakat bu sistemlerde seçenekleri kullanabilmek için "-" karakteri yerine "/" karakteri 
+kullanılmaktadır. Örneğin,
+
+    "gcc -c sample.c" 
+
+ifadesini UNIX/Linux türevi sistemlerde "shell" programına geçtiğimiz zaman "sample.c" dosyası sadece derlenir. Aynı etkiyi Windows
+sistemlerinde oluşturmak için,
+
+    "cl /c sample.c" 
+
+ifadesini ilgili "shell" programına geçmeliyiz. Şimdi de komut satırı argümanlarının oluşturulma biçimlerini inceleyelim. Şöyleki;
+    >> UNIX/Linux sistemlerinde GNU stili kullanılır. Bu stile göre üç farklı seçenek bulunmaktadır. Bunlar Argümansız Seçenekler,
+    Argümanlı Seçenekler ve Seçeneksiz Argümanlar biçimindedir. 
+        >>> Argümansız Seçenekler: Yalnız "-" karakteri ve bunun yanındada tek bir karakterin olduğu seçeneklerdir. Örneğin,
+
+            "ls -l -i" 
+        
+        ifadesindeki "-l" ve "-i" seçenekleri Argümansız Seçeneklerdir. Bazı durumlarda "-" karakterinin yanında birden fazla karakter 
+        daha yazıldığı görülmüştür. Bu tür durumlarda iş bu iki karakterlerin her birisi ayrı ayrı Argümansız Seçeneklerdir. Örneğin,
+
+            "ls -li" 
+
+        ifadesindeki "-li" aslında "-l -i" ifadesinin kısaltılmış biçimidir. Son olarak böylesi seçeneklerin yazım sırasında 
+        karakterlerin sıralamasının bir önemi yoktur.  
+        >>> Argümanlı Seçenekler: Öyle seçeneklerdir ki tek başlarına kullanılamaz, mutlaka peşinden bir argümanı gelmelidir. Örneğin,
+
+            "prog -t x.txt"
+
+        ifadesindeki "-t" aslında Argümanlı Seçenek olup, "x.txt" ise bunun argümanıdır. Böylesi seçeneklerden sonra geçilen 
+        ifadeler, o seçeneğin argümanı olarak ele alınırlar. Öte yandan böylesi seçeneker, yukarıdaki argümansız seçenekler 
+        ile de birleştirilip yazılabilir. Örneğin,
+
+            "gcc -lt x.txt" 
+
+        ifadesindeki "x.txt" aslında "-t" seçeneğinin argümanıdır ve "-l" argümansız seçeneği ile birleştirilerek yazılmıştır. 
+        Fakat böylesi kullanım pek tavsiye edilmez. Bir diğer yandan argümanlı seçeneklerin argümanları, seçenekleri ile de 
+        birleştirilip yazılabilmektedir. Örneğin,
+
+            "gcc -osample sample.c"
+
+        ifadesinde "sample" ifadesi aslında "-o" seçeneğinin argümanıdır. Fakat bazı programlar bu tip yazımı kabul etmemektedir.
+
+        >>> Seçeneksiz Argümanlar: Hiç bir seçenek ile alakası olmayan argümanlardır. Örneğin, 
+
+            "gcc -o sample sample.c" 
+
+        ifadesindeki "sample.c" ifadesi seçeneksiz argümandır. Hiç bir seçeneğe ait değildir. Normal bir komut satırı argümanıdır.  
+    
+    Öte yandan "GNU" stilinde tek karakterden oluşmayan uzun seçenekler de kullanılmaya başlandı. Yani öyle seçenekler ki birden 
+    fazla karakterin kullanıldığı seçenekler. Bu tip seçeneklerdeki amaç yukarida detayları açıklanan tek karakterli seçeneklerin 
+    getirdiği bir takım karmaşıklıkları gidermektir. Fakat POSIX standartları bu uzun seçenekleri desteklememektedir. Ancak
+    UNIX/Linux dünyasında yaygın biçimde kullanılmaktadır. Pekiyi bu uzun seçenekler nasıl oluşturulur? Yine burada da Argümanlı 
+    Uzun Seçenek, Argümansız Uzun Seçenek ve İsteğe Bağlı Argümanlı Uzun Seçenek biçimleri vardır. Artık bu uzun seçenekleri 
+    kullanırken "-" karakteri yerine "--" ifadesi kullanılır. Örneğin,
+
+        "prog --count -a -b -c --length 100" 
+
+    ifadesini ele alalım. Buradaki "count" ve "length" artık uzun seçenektir. Şimdi de bu uzun seçenekleri inceleyelim:
+        >>> Argümanlı Uzun Seçenek: Yukarıda anlatılan Argümanlı Seçeneklerdeki mevzunun aynısıdır. Yukarıdaki örneği ele alırsak,
+        "--length 100" ifadesindeki "length" seçeneği argümanlı uzun seçenektir. Dolayısıyla "100" ifadesi de bu seçeneğin 
+        argümanıdır. 
+
+        >>> Argümansız Uzun Seçenek: Yukarıda anlatılan Argümansız Seçeneklerdeki mevzunun aynısıdır. Yukarıdaki örneği ele alırsak,   
+        "--count" bir argümansız uzun seçenektir. 
+
+        >>> İsteğe Bağlı Argümanlı Uzun Seçenek: Bu ise sadece uzun seçeneklere has bir konudur. İlgili seçeneğe herhangi bir 
+        seçeneği özel olarak geçmediğimiz zaman, varsayılan argümanın geçilmesini olanak kılar. Burada artık "=" karakteri de 
+        kullanıma girmektedir. Şöyleki;
+
+            "prog --size=512" 
+
+        ifadesinde "size" uzun seçeneğine argüman olarak "512" geçilmiştir. Eğer bizler sistem tarafından atanan varsayılan değeri 
+        kullanmak isteseydik, komutumuz şu şekilde olacaktı:
+
+            "prog --size"
+
+        Burada dikkat etmemiz gereken husus ilgili uzun seçeneğin, "=" karakterinin ve bu seçeneğe geçilecek argümanın arasında 
+        herhangi bir boşluk karakterinin olmaması gerektiğidir. Dolayısıyla aşağıdaki kullanım farklı bir anlam içermektedir;
+
+            "prog --size 512" 
+
+    Günümüzde programlar bazı kısa seçeneklere alternatif olarak uzun seçenek, bazı uzun seçeneklere alternatif olarak da kısa seçenek 
+    barındırmaktadır. Örneğin, "ls" komutunda "-a" seçeneği ile "--all" seçeneği aynı işlevi görmektedir. Yine benzer biçimde "-A" ile 
+    "--almost-all" seçeneği de aynı işlevi görmektedir. Buradan hareketle şunu da belirtmeliyiz ki UNIX/Linux dünyasındaki seçenekler 
+    "case-sensitive" durumdadır. Fakat unutmamalıyız ki POSIX standartları uzun SEÇENEKLERİ DESTEKLEMEMEKTEDİR. Dolayısıyla bu noktada 
+    ilgili işletim sisteminin ilgili programlar hakkında sunduğu programlara bakmalıyız. Son olarak belirtmekte fayda vardır ki bu "GNU"
+    stili bir zorunluluk değil, herkesin benimsediği bir stildir. Dolayısıyla kendi programlarımızda komut satırı argümanlarının işlerken
+    başka stilleri takip edebiliriz. İş bu nedenden dolayı bazı programlar, özellikle çok eski programlar, bu "GNU" stilini takip
+    etmemektedir. Örneğin,
+
+        "gcc sample.c -o sample -Wall" 
+
+    ifadesinde de görüleceği üzere "-Wall" seçeneksiz argümanı, yukarıdaki "GNU" stiline uygun olmadığı görülecektir.   
+
+    >> Windows sistemlerinde ise yukarıdaki gibi bir stil mevcut değildir. Microsoft firmasının kendi oluşturduğu bir stil vardır. 
+    Kabaca belirtmek gerekirse; "-" karakteri yerine "/" karakteri kullanılır. Argümanlı Seçeneklerde argümanlar ":" karakteri ile 
+    bitişik yazılır veya ":" olmadan direkt olarak bitişik yazılır. Fakat Windows ailesi genel itibariyle pencereli bir çalışma 
+    ortamı sunduğu için komut satırı kullanımı UNIX dünyası kadar aktif değildir. 
+
+Pekiyi bizler komut satırı argümanlarını nasıl "parse" edeceğiz? 
+    >> UNIX/Linux dünyasında "parse" işlemi için POSIX standartlarında "getopt" isimli bir fonksiyon vardır. POSIX standartları 
+    uzun seçenekleri desteklemediği için, bu fonksiyon da sadece kısa seçenekleri desteklemektedir. Uzun seçenekleri "parse" işlemi 
+    için ise "getopt_long" isimli fonksiyonu kullanacağız. 
+        >>> "getopt" fonksiyonu: Yukarıda da açıklandığı üzere bir POSIX fonksiyonudur. Fonksiyonun prototipi aşağıdaki gibidir:
+
+            #include <unistd.h>
+            int getopt(int argc, char * const argv[], const char *optstring);
+
+        Fonksiyonun birinci ve ikinci parametreleri, "main" fonksiyonunun parametreleridir. Üçüncü parametre ise programımızın 
+        kullanacağı seçenekleri içeren yazının başlangıç adresidir. Bu yazıda argümanlı ve argümansız seçenekleri belirtmeliyiz. 
+        Argümansız seçenekleri direkt belirtirken, argümanlı seçenekleri ise ":" atomu ile birlikte belirtmeliyiz. Seçeneksiz 
+        argümanları ise bu fonksiyon, ikinci parametresine geçilen dizinin belli bir konuma, otomatik olarak yerleştirmektedir.
+        Fonksiyonun geri dönüş değeri ise "parse" edecek bir şey kalmadığında "-1", bulduğu seçenekler için seçeneğin kendisine,
+        geçersiz bir seçenek veya argümanlı bir seçeneğin argümanı girilmediğinde "?" ile geri dönmektedir. Burada seçeneğin 
+        kendisine dönerken "char" türden değil, karakterin ASCII tablosundaki "int" türüne geri dönmektedir. 
+            * Örnek 1,
+                #include <stdio.h>
+                #include <unistd.h>
+
+                int main(int argc, char** argv)
+                {
+                    /*
+                        # Command Line Arguments #
+                        -a -b Ahmet -c
+                    */
+                    
+                    /*
+                        # OUTPUT #
+                        a is given
+                        b is given
+                        c is given
+                    */
+                    
+                    /*
+                    * "a" ve "c" seçenekleri argümansız, 
+                    * "b" seçeneği ise argümanlıdır. 
+                    */
+                    const char* options = "ab:c";
+                    
+                    int result;
+                    while((result = getopt(argc, argv, options)) != -1)
+                    {
+                        switch(result)
+                        {
+                            case 'a' : printf("%c is given\n", result); break;
+                            case 'b' : printf("%c is given\n", result); break;
+                            case 'c' : printf("%c is given\n", result); break;
+                            case '?' : printf("Invalid option is given: %c", result); break;
+                            default  : break;
+                        }
+                    }
+                    return 0;
+                }
+
+        Öte yandan fonksiyon, geçersiz bir seçenek girildiğide, "?" ile geri döneceğinden bahsetmiştik. Pekiyi böylesi bir senaryoda
+        işler nasıl ilerlemektedir? Aşağıdaki örneğin inceleyelim:
+            * Örnek 1, 
+                #include <stdio.h>
+                #include <unistd.h>
+
+                int main(int argc, char** argv)
+                {
+                    /*
+                        # Command Line Arguments #
+                        -a -b Ahmet -c -D
+                    */
+                    
+                    /*
+                        # OUTPUT #
+                        a is given
+                        b is given
+                        c is given
+                        ./a.out: invalid option -- 'D'
+                        Invalid option is given: ?
+                    */
+                    
+                    const char* options = "ab:c";
+                    
+                    int result;
+                    while((result = getopt(argc, argv, options)) != -1)
+                    {
+                        switch(result)
+                        {
+                            case 'a' : printf("%c is given\n", result); break;
+                            case 'b' : printf("%c is given\n", result); break;
+                            case 'c' : printf("%c is given\n", result); break;
+                            case '?' : printf("Invalid option is given: %c", result); break;
+                            default  : break;
+                        }
+                    }
+                    return 0;
+                }
+        
+        Çıktıdan da görüleceği üzere hem bizim "case '?'" ile belirttiğimiz hata mesajı ekrana yazıldı hem de sistemin 
+        kendi oluşturduğu hata mesajı. Eğer bu hata mesajlarının yazılmasını biz üzerimize almak istiyorsak, işin başında 
+        "opterr" isimli değişkenin değerini sıfıra çekmeliyiz. Böylelikle artık sistem hata mesajı oluşturmayacaktır. İlgili 
+        değişkenin "extern" bildirimi ilgili başlık dosyalarının içerisinde yapılmıştır.
+            * Örnek 1,
+                #include <stdio.h>
+                #include <unistd.h>
+
+                int main(int argc, char** argv)
+                {
+                    /*
+                        # Command Line Arguments #
+                        -a -b Ahmet -c -D
+                    */
+                    
+                    /*
+                        # OUTPUT #
+                        a is given
+                        b is given
+                        c is given
+                        Invalid option is given: ?
+                    */
+                    
+                    opterr = 0; // Artık hata mesajlarının işlenmesi bizim sorumluluğumuzda.
+                    
+                    const char* options = "ab:c";
+                    
+                    int result;
+                    while((result = getopt(argc, argv, options)) != -1)
+                    {
+                        switch(result)
+                        {
+                            case 'a' : printf("%c is given\n", result); break;
+                            case 'b' : printf("%c is given\n", result); break;
+                            case 'c' : printf("%c is given\n", result); break;
+                            case '?' : printf("Invalid option is given: %c", result); break;
+                            default  : break;
+                        }
+                    }
+                    return 0;
+                }
+
+        Anımsayacağınız üzere fonksiyonun geri dönüş değeri "?" biçimindeydi eğer argümanlı bir seçeneğin argümanı girilmemişse veya 
+        belirtilmeyen bir seçenek girilmişse. Pekiyi bizler bunu nasıl ayırt edeceğiz? İşte burada devreye "optopt" isimli değişken
+        girmektedir. Yine bu değişkenin de "extern" bildirimi ilgili başlık dosyasında yapılmıştır. Fonksiyon "?" ile geri dönerse 
+        "optopt" değişkeninin değeri iş bu sorunlu seçenek olacaktır. 
+            * Örnek 1,
+                #include <stdio.h>
+                #include <unistd.h>
+
+                int main(int argc, char** argv)
+                {
+                    /*
+                        # Command Line Arguments #
+                        -a -c -D -b
+                    */
+                    
+                    /*
+                        # OUTPUT #
+                        a is given
+                        c is given
+                        Unknown option: D
+                        b option is given w/o an argument.
+                    */
+                    
+                    opterr = 0; // Artık hata mesajlarının işlenmesi bizim sorumluluğumuzda.
+                    
+                    const char* options = "ab:c";
+                    
+                    int result;
+                    while((result = getopt(argc, argv, options)) != -1)
+                    {
+                        switch(result)
+                        {
+                            case 'a' : printf("%c is given\n", result); break;
+                            case 'b' : printf("%c is given\n", result); break;
+                            case 'c' : printf("%c is given\n", result); break;
+                            case '?' : 
+                            {
+                                if(optopt == 'b')
+                                    fprintf(stderr, "%c option is given w/o an argument.\n", optopt);
+                                else
+                                    fprintf(stderr, "Unknown option: %c\n", optopt);
+                                break;
+                            }
+                            default  : break;
+                        }
+                    }
+                    return 0;
+                }
+
+        Pekiyi argümanlı seçeneklerin argümanlarını bizler nasıl "parse" edeceğiz? Bu durumda da devreye "optarg" isimli gösterici 
+        girmektedir. İlgili seçeneğin bulunduğu noktada bu gösterici ilgili argümanı gösterecektir. Döngünün diğer turunda ise eğer 
+        yeni bir argümanlı seçenek bulursa, onun argümanını gösterecektir. Buradan hareketle bizler her argümanlı seçenek için başka 
+        göstericiler de oluşturmalıyız ki ilgili argümanların değerlerini saklayabilelim. Çünkü "optarg" nin değeri döngünün her 
+        turunda değişme ihtimaline sahiptir. Yine bu değişkenin de bildirimi ilgili başlık dosyası içerisinde yapılmıştır. 
+            * Örnek 1, Aşağıdaki örnekte argümanlı seçeneğin argümanı saklanmamıştır. 
+                #include <stdio.h>
+                #include <unistd.h>
+
+                int main(int argc, char** argv)
+                {
+                    /*
+                        # Command Line Arguments #
+                        -a -c -D -b Ahmet
+                    */
+                    
+                    /*
+                        # OUTPUT #
+                        a is given
+                        c is given
+                        Unknown option: D
+                        b is given with an argument Ahmet
+                    */
+                    
+                    opterr = 0; // Artık hata mesajlarının işlenmesi bizim sorumluluğumuzda.
+                    
+                    const char* options = "ab:c";
+                    
+                    int result;
+                    while((result = getopt(argc, argv, options)) != -1)
+                    {
+                        switch(result)
+                        {
+                            case 'a' : printf("%c is given\n", result); break;
+                            case 'b' : printf("%c is given with an argument %s\n", result, optarg); break;
+                            case 'c' : printf("%c is given\n", result); break;
+                            case '?' : 
+                            {
+                                if(optopt == 'b')
+                                    fprintf(stderr, "%c option is given w/o an argument.\n", optopt);
+                                else
+                                    fprintf(stderr, "Unknown option: %c\n", optopt);
+                                break;
+                            }
+                            default  : break;
+                        }
+                    }
+                    return 0;
+                }
+
+        Şimdi geriye seçeneksiz argümanların değerlendirilmesi kaldı. Anımsayacağınız üzere bu argümanlar "getopt" fonksiyonunun ikinci 
+        parametresindeki dizinin sonuna doğru ötelenmektedir. İşte bu argümanların başladığı indis, "optind" isimli değişkende saklanır. 
+        "optind" ile dizinin sonundaki bölüm seçeneksiz argümanların bulunduğu yer olacaktır. Yine bu değişkenin de "extern" bildirimi
+        ilgili başlık dosyası içerisinde yapılmıştır. 
+            * Örnek 1,
+                #include <stdio.h>
+                #include <unistd.h>
+
+                int main(int argc, char** argv)
+                {
+                    /*
+                        # Command Line Arguments #
+                        Kandemir -a -c Pehlivanli -D -b Ahmet
+                    */
+                    
+                    /*
+                        # OUTPUT #
+                        a is given
+                        c is given
+                        Unknown option: D
+                        b is given with an argument Ahmet
+                        Arguments w/o options are: Kandemir,Pehlivanli
+                    */
+                    
+                    opterr = 0; // Artık hata mesajlarının işlenmesi bizim sorumluluğumuzda.
+                    
+                    const char* options = "ab:c";
+                    
+                    int result;
+                    while((result = getopt(argc, argv, options)) != -1)
+                    {
+                        switch(result)
+                        {
+                            case 'a' : printf("%c is given\n", result); break;
+                            case 'b' : printf("%c is given with an argument %s\n", result, optarg); break;
+                            case 'c' : printf("%c is given\n", result); break;
+                            case '?' : 
+                            {
+                                if(optopt == 'b')
+                                    fprintf(stderr, "%c option is given w/o an argument.\n", optopt);
+                            else
+                                    fprintf(stderr, "Unknown option: %c\n", optopt);
+                                break;
+                            }
+                            default  : break;
+                        }
+                    }
+                    
+                    if(optind != argc)
+                        printf("Arguments w/o options are: ");
+                    for(int i = optind; i < argc; ++i)
+                        printf("%s%s", argv[i], i == argc - 1 ? " " : ",");
+                    
+                    
+                    return 0;
+                }
+
+        Bizlerin buradaki asıl amacı, girilecek olan seçenekleri işlemektir. Bunun için şöyle bir kalıp önerilmektedir; her seçenek için bir "flag"
+        değişken ve her argümanlı seçenek için ayrı bir gösterici belirlenir. Daha sonra ilgili "while" döngüsünde bu değişkenlere uygun değerleri
+        atayıp, "while" döngüsünden sonra da bu "flag" ve göstericileri kullanarak gereken işlemleri gerçekleştirmek. Aşağıda bu kalıp için kapsayıcı
+        bir örnek verilmiştir.
+            * Örnek 1,
+                #include <stdio.h>
+                #include <unistd.h>
+
+                int main(int argc, char** argv)
+                {
+                    /*
+                        # Command Line Arguments #
+                        Kandemir -a -c Pehlivanli -D -b Ahmet
+                    */
+                    
+                    /*
+                        # OUTPUT #
+                        Unknown option: D
+                        -a option is given...
+                        -b option is given with argument: Ahmet
+                        -c option is given...
+                        Arguments w/o options are: Kandemir,Pehlivanli 
+                    */
+                    
+                    int a_flag, b_flag, c_flag;
+                    char* b_arg;
+                    const char* options = "ab:c";
+                    int result;
+                    
+                    a_flag = b_flag = c_flag = 0;
+                    opterr = 0;
+                    
+                    while((result = getopt(argc, argv, options)) != -1)
+                    {
+                        switch(result)
+                        {
+                            case 'a' : a_flag = 1; break;
+                            case 'b' : b_flag = 1; b_arg = optarg; break;
+                            case 'c' : c_flag = 1; break;
+                            case '?' : 
+                            {
+                                if(optopt == 'b')
+                                    fprintf(stderr, "%c option is given w/o an argument.\n", optopt);
+                                else
+                                    fprintf(stderr, "Unknown option: %c\n", optopt);
+                                break;
+                            }
+                            default  : break;
+                        }
+                    }
+                    
+                    if(a_flag)
+                        printf("-a option is given...\n");
+                    if(b_flag)
+                        printf("-b option is given with argument: %s\n", b_arg);
+                    if(c_flag)
+                        printf("-c option is given...\n");
+                    
+                    if(optind != argc)
+                        printf("Arguments w/o options are: ");
+                    for(int i = optind; i < argc; ++i)
+                        printf("%s%s", argv[i], i == argc - 1 ? " " : ",");
+                    
+                    return 0;
+                }
+
+            * Örnek 2, Aşağıdaki örnekte "-t", "-o" ve "-x" seçeneklerinden yalnızca birisini kullanabiliriz. "-n" seçeneği 
+            argümanlı bir seçenek olup, varsayılan argümanı ise "DEFAULT_LINE_CHAR" değerindedir ve sadece "-o" ve "-x" seçenekleri 
+            ile birlikte kullanılabilir. Öte yandan hiç seçenek kullanmazsak, varsayılan seçenek olarak "-t" seçeneği kullanılacaktır.
+            Son olarak bir dosya ismi de komut satırı argümanı olarak fonksiyona geçilmelidir ki bu dosya ismi seçeneksiz argüman olarak
+            değerlendirilecektir. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <ctype.h>
+                #include <unistd.h>
+
+                #define DEFAULT_LINE_CHAR      16
+
+                void disp_text(FILE* f);
+                void disp_hex(FILE* f, int n_arg);
+                void disp_octal(FILE* f, int n_arg);
+                int check_number(const char* str);
+
+                int main(int argc, char** argv)
+                {
+                    /*
+                        # Command Line Arguments #
+                        [-t -o -x -n <count>] <path>
+                            default: -t, -n 16 
+                    */
+                                        
+                    int t_flag, o_flag, x_flag, n_flag, err_flag;
+                    int n_arg = DEFAULT_LINE_CHAR;
+                    const char* options = "toxn:";
+                    int result;
+                    
+                    opterr = t_flag = o_flag = x_flag = n_flag = err_flag = 0;
+                    
+                    while((result = getopt(argc, argv, options)) != -1)
+                    {
+                        switch(result)
+                        {
+                            case 't' : t_flag = 1; break;
+                            case 'o' : o_flag = 1; break;
+                            case 'x' : x_flag = 1; break;
+                            case 'n' :
+                            {
+                                n_flag = 1;
+                                if((n_arg = check_number(optarg)) < 0)
+                                {
+                                    fprintf(stderr, "-n argument is invalid!...\n");
+                                    err_flag = 1;
+                                }
+                                break;
+                            }
+                            case '?' : 
+                            {
+                                err_flag = 1;
+                                if(optopt == 'n')
+                                    fprintf(stderr, "%c option is given w/o an argument.\n", optopt);
+                                else
+                                    fprintf(stderr, "Unknown option: %c\n", optopt);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if(err_flag)
+                        exit(EXIT_FAILURE);
+                        
+                    if(t_flag && n_flag)
+                    {
+                        fprintf(stderr, "-t cannot be used with -n!...\n");
+                        exit(EXIT_FAILURE);        
+                    }
+                    
+                    if(t_flag + o_flag + x_flag > 1)
+                    {
+                        fprintf(stderr, "only one of -[tox] can be used!...\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if(t_flag + o_flag + x_flag == 0)
+                        t_flag = 1;
+
+                    if(argc - optind == 0)
+                    {
+                        fprintf(stderr, "A file name must be specified!...\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    
+                    FILE* f;
+                    if((f = fopen(argv[optind], t_flag ? "r" : "rb")) == NULL)
+                    {
+                        fprintf(stderr, "cannot open file: %s\n", argv[optind]);
+                        exit(EXIT_FAILURE);
+                    }
+                    
+                    if(t_flag)
+                        disp_text(f);
+                    else if(x_flag)
+                        disp_hex(f, n_arg);
+                    else if(o_flag)
+                        disp_octal(f, n_arg);
+
+                    fclose(f);
+                    
+                    return 0;
+                }
+
+                void disp_text(FILE* f)
+                {
+                    fprintf(stdout, "<file read is started!...>\n");
+                    int ch;
+                    while((ch = fgetc(f)) != EOF)
+                        putchar(ch);
+                        
+                    puts("");
+                        
+                    if(ferror(f))
+                    {
+                        fprintf(stderr, "file read could not be completed!...\n"); exit(EXIT_FAILURE);
+                    }
+                    else if(feof(f))
+                    {
+                        fprintf(stdout, "<file read is completed!...>\n"); return;
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Something has happened!...\n"); exit(EXIT_FAILURE);
+                    }
+                }
+
+                void disp_hex(FILE* f, int n_arg)
+                {
+                    fprintf(stdout, "<file read is started!...>\n");
+                    size_t i;
+                    int ch;
+                    
+                    for(i = 0;(ch = fgetc(f)) != EOF; ++i)
+                    {
+                        if(i % n_arg == 0)
+                        {
+                            if(i != 0)
+                                putchar('\n');
+                            
+                            printf("%08zX ", i);
+                        }
+                        
+                        printf("%02X ",ch);
+                    }
+                    
+                    puts("");
+                    
+                    if(ferror(f))
+                    {
+                        fprintf(stderr, "file read could not be completed!...\n"); exit(EXIT_FAILURE);
+                    }
+                    else if(feof(f))
+                    {
+                        fprintf(stdout, "<file read is completed!...>\n"); return;
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Something has happened!...\n"); exit(EXIT_FAILURE);
+                    }
+                }
+
+                void disp_octal(FILE* f, int n_arg)
+                {
+                    fprintf(stdout, "<file read is started!...>\n");
+                    size_t i;
+                    int ch;
+                    
+                    for(i = 0;(ch = fgetc(f)) != EOF; ++i)
+                    {
+                        if(i % n_arg == 0)
+                            printf("%08zo ", i);
+                        
+                        printf("%03o ",ch);
+                        
+                        if(i % n_arg == n_arg - 1)
+                            putchar('\n');
+                    }
+                    
+                    puts("");
+                    
+                    if(ferror(f))
+                    {
+                        fprintf(stderr, "file read could not be completed!...\n"); exit(EXIT_FAILURE);
+                    }
+                    else if(feof(f))
+                    {
+                        fprintf(stdout, "<file read is completed!...>\n"); return;
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Something has happened!...\n"); exit(EXIT_FAILURE);
+                    }
+                }
+
+                int check_number(const char* str)
+                {
+                    const char* temp;
+                    
+                    while(isspace(*str))
+                        ++str;
+                    
+                    temp = str;
+                        
+                    while(isdigit(*str))
+                        ++str;
+                        
+                    if(*str != '\0')
+                        return -1;
+                        
+                    int result;
+                    if((result = atoi(temp)) == 0)
+                        return -1;
+                    
+                    return result;
+                }
+
+            * Örnek 3, Aşağıdaki örnek ise yukarıdaki örneğin biraz daha düzenlenmiş halidir:
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <ctype.h>
+                #include <unistd.h>
+
+                #define DEFAULT_LINE_CHAR      16
+                #define HEX_FORM               16
+                #define OCT_FORM               8
+
+                void disp_text(FILE* f);
+                void disp_hex_octal(FILE* f, int n_arg, int base);
+                int check_number(const char* str);
+
+                int main(int argc, char** argv)
+                {
+                    /*
+                        # Command Line Arguments #
+                        [-t -o -x -n <count>] <path>
+                            default: -t, -n 16 
+                    */
+                    
+                    /*
+                        # OUTPUT #
+                    */
+                    
+                    int t_flag, o_flag, x_flag, n_flag, err_flag;
+                    int n_arg = DEFAULT_LINE_CHAR;
+                    const char* options = "toxn:";
+                    int result;
+                    
+                    opterr = t_flag = o_flag = x_flag = n_flag = err_flag = 0;
+                    
+                    while((result = getopt(argc, argv, options)) != -1)
+                    {
+                        switch(result)
+                        {
+                            case 't' : t_flag = 1; break;
+                            case 'o' : o_flag = 1; break;
+                            case 'x' : x_flag = 1; break;
+                            case 'n' :
+                            {
+                                n_flag = 1;
+                                if((n_arg = check_number(optarg)) < 0)
+                                {
+                                    fprintf(stderr, "-n argument is invalid!...\n");
+                                    err_flag = 1;
+                                }
+                                break;
+                            }
+                            case '?' : 
+                            {
+                                err_flag = 1;
+                                if(optopt == 'n')
+                                    fprintf(stderr, "%c option is given w/o an argument.\n", optopt);
+                                else
+                                    fprintf(stderr, "Unknown option: %c\n", optopt);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if(err_flag)
+                        exit(EXIT_FAILURE);
+                        
+                    if(t_flag && n_flag)
+                    {
+                        fprintf(stderr, "-t cannot be used with -n!...\n");
+                        exit(EXIT_FAILURE);        
+                    }
+                    
+                    if(t_flag + o_flag + x_flag > 1)
+                    {
+                        fprintf(stderr, "only one of -[tox] can be used!...\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if(t_flag + o_flag + x_flag == 0)
+                        t_flag = 1;
+
+                    if(argc - optind == 0)
+                    {
+                        fprintf(stderr, "A file name must be specified!...\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    
+                    FILE* f;
+                    if((f = fopen(argv[optind], t_flag ? "r" : "rb")) == NULL)
+                    {
+                        fprintf(stderr, "cannot open file: %s\n", argv[optind]);
+                        exit(EXIT_FAILURE);
+                    }
+                    
+                    if(t_flag)
+                        disp_text(f);
+                    else if(x_flag)
+                        disp_hex_octal(f, n_arg, HEX_FORM);
+                    else if(o_flag)
+                        disp_hex_octal(f, n_arg, OCT_FORM);
+
+                    fclose(f);
+                    
+                    return 0;
+                }
+
+                void disp_text(FILE* f)
+                {
+                    fprintf(stdout, "<file read is started!...>\n");
+                    int ch;
+                    while((ch = fgetc(f)) != EOF)
+                        putchar(ch);
+                        
+                    puts("");
+                        
+                    if(ferror(f))
+                    {
+                        fprintf(stderr, "file read could not be completed!...\n"); exit(EXIT_FAILURE);
+                    }
+                    else if(feof(f))
+                    {
+                        fprintf(stdout, "<file read is completed!...>\n"); return;
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Something has happened!...\n"); exit(EXIT_FAILURE);
+                    }
+                }
+
+                void disp_hex_octal(FILE* f, int n_arg, int base)
+                {
+                    fprintf(stdout, "<file read is started!...>\n");
+                    size_t i;
+                    int ch;
+                    
+                    for(i = 0;(ch = fgetc(f)) != EOF; ++i)
+                    {
+                        if(i % n_arg == 0)
+                        {
+                            if(i != 0)
+                                putchar('\n');
+                            
+                            printf(base == HEX_FORM ? "%08zX " : "%08zo ", i);
+                        }
+                        
+                        base == HEX_FORM ? printf("%02X ",ch) : printf("%03o ",ch);
+                    }
+                    
+                    puts("");
+                    
+                    if(ferror(f))
+                    {
+                        fprintf(stderr, "file read could not be completed!...\n"); exit(EXIT_FAILURE);
+                    }
+                    else if(feof(f))
+                    {
+                        fprintf(stdout, "<file read is completed!...>\n"); return;
+                    }
+                    else
+                    {
+                        fprintf(stderr, "Something has happened!...\n"); exit(EXIT_FAILURE);
+                    }
+                }
+
+                int check_number(const char* str)
+                {
+                    const char* temp;
+                    
+                    while(isspace(*str))
+                        ++str;
+                    
+                    temp = str;
+                        
+                    while(isdigit(*str))
+                        ++str;
+                        
+                    if(*str != '\0')
+                        return -1;
+                        
+                    int result;
+                    if((result = atoi(temp)) == 0)
+                        return -1;
+                    
+                    return result;
+                }
+
+        >>> "getopt_long" fonksiyonu: Komut satırı argümanlarının uzun seçenekleri için çağrılan fonksiyondur. POSIX standart 
+        fonksiyonu değildir. İşlevsel olarak "getopt" fonksiyonunu kapsamasına karşın, kullanım açısından biraz daha karmaşıktır. 
+        Fonksiyonun prototipi şu şekildedir:
+
+            #include <getopt.h>
+            int getopt_long(
+                int argc,
+                char * const argv[],
+                const char *optstring,
+                const struct option *longopts,
+                int *longindex
+            );
+
+        Fonksiyonun ilk iki parametresi "main" fonksiyonundan geçirilecek olan argümanlardır. Üçüncü parametre ise kısa seçeneklerin 
+        geçildiği yazıdır. Fonksiyonun dördüncü parametresi ise elemanları "struct option" türünden olan bir dizinin başlangıç 
+        adresini istemektedir. İş bu yapı türü "getopt.h" başlık dosyasında aşağıdaki gibi tanımlanmıştır:
+
+            struct option
+            {
+                const char *name;       /* Uzun seçeneğin ismi */
+                int         has_arg;    /* Uzun seçeneğin argüman alıp almadığı bilgisi */
+                int        *flag;
+                int         val;
+            }; 
+
+        Bu adrese geçilen dizinin son elemanı "NULL" değerinde OLMALIDIR. Böylelikle ilgili dizinin eleman sayısı belirlenebilsin. 
+        "struct option" yapısının,
+            >>>> "name" isimli elemanı, uzun seçeneğin ismini belirtmektedir.
+            
+            >>>> "has_arg" isimli elemanı, uzun seçeneğin argüman alıp almadığını belirtmektedir. Bu eleman "no_argument", 
+            "required_argument" veya "optional_argument" değerlerinden birisini almalıdır. Aslında bu değerler sırasıyla 
+            "0", "1" ve "2" rakamlarının "typedef" edilmiş halleridir. 
+            
+            >>>> "flag" isimli eleman, ilgili uzun seçeneğin bulunması durumunda "getopt_long" fonksiyonunun hangi değer 
+            ile döneceğini belirtmektedir. Eğer bu elemana bir adres geçilirse ve ilgili uzun seçenek bulunursa, "struct option"
+            yapısının "val" isimli elemanına geçilen değer bu elemana geçilen adrese yazılacak. "getopt_long" fonksiyonu da "0" 
+            ile geri dönecektir. Eğer bu eleman "NULL" değeri alırsa, ilgili uzun seçeneğin bulunması durumunda, "getopt_long"
+            fonksiyonu "val" isimli elemana geçilen değer ile geri dönecektir. 
+            
+            >>>> "val" elemanı ise "getopt_long" fonksiyonunun geri dönüş değeri ile ilişkilidir. 
+        
+        Fonksiyonun beşinci parametresi ise ilgili uzun seçeneğin, dördüncü parametresine geçilen dizinin kaçıncı elemanı olduğu 
+        bilgi ile ilgilidir. İlgili indeks değeri, bu parametreye geçilen adrese yazılmaktadır. Fakat çok nadir kullanılan bir 
+        parametredir, dolayısıyla genelde "NULL" değeri geçilir. Eğer "getopt_long" fonksiyonunun dördüncü ve beşinci parametrelerine 
+        "NULL" değerini geçersek, artık "getopt" fonksiyonu gibi çalışacaktır. Yine "getopt_long" fonksiyonu da bir döngü içerisinde 
+        çağırmalıyız, tıpkı "getopt" fonksiyonunu çağırdığımız gibi. "getopt_long" fonksiyonunun geri dönüş değeri seçeneğin kısa 
+        ya da uzun olmasına göre değişkenlik göstermektedir. Şöyleki;
+            >>>> Kısa seçenek bulmuşsa, kısa seçeneğin karakter kodu ile geri döner.
+            
+            >>>> Uzun seçenek bulmuş ve "struct option" yapısının "flag" parametresinde "NULL" değeri vardır, "struct option"
+            yapısının "val" parametresindeki değer ile geri döner. 
+            
+            >>>> Uzun seçenek bulmuş ve "struct option" yapısının "flag" parametresinde "NULL" değeri yoktur. Bu durumda "struct option"
+            yapısının "val" parametresindeki değer, "flag" parametresindeki adrese yazılır. "getopt_long" fonksiyonu ise "0" ile 
+            geri döner. 
+            
+            >>>> Fonksiyon olmayan bir kısa yada uzun seçenek ile karşılaşmıştır veya argümanlı bir kısa seçenek yada argümanlı uzun
+            seçeneğin argümanı girilmemiştir. İşte bu durumda "?" ile geri dönmektedir.
+                >>>>> Argümanlı bir kısa seçeneğin argümanı girilmediğinde, o kısa seçeneğin ASCII karşılığını "optopt" değişkeni alır. 
+            
+                >>>>> Argümanlı bir uzun seçeneğin argümanı girilmediğinde, "struct option" yapısının "val" isimli elemanı "optopt"
+                değişkenine atanır. 
+            
+                >>>>> Geçersiz bir kısa seçenek ile karşılaşılmışsa, "optopt" geçersiz kısa seçeneğin karakter karşılığını alır. 
+            
+                >>>>> Geçersiz bir uzun seçenek ile karşılaşılmışsa, "optopt" değişkenine "0" değeri atanır. Fakat bu geçersiz 
+                uzun seçeneğin ne olduğunu bize VERMEMEKTEDİR. Fakat GNU'nun "getopt_long" fonksiyonu incelendiğinde, iş bu 
+                geçersiz uzun seçeneğe "main" dizisine geçilen "argv" dizisinin "optind - 1" indeksinde görülmektedir. Fakat bu ilgili
+                standartlarda BELİRTİLMEMİŞTİR.     
+            
+            >>>> Eğer "parse" edecek bir argüman kalmamışsa "-1" ile geri dönecektir.  
+
+        Aşağıda örnek bir kullanım verilmiştir:
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <getopt.h>
+
+                int main(int argc, char** argv)
+                {
+                    /*
+                        # Command Line Arguments #
+                        -a -b -c 500 --length
+                    */
+                    
+                    /*
+                        # OUTPUT #
+                        --length is called
+                        -a option is used...
+                        -b option is used...
+                        -c or --count option is used with [500]...
+                        --length is used...
+                    */
+                    
+                    /*
+                    * "count" seçeneği bulunursa, 'c' karakteri "count_flag" değişkeni
+                    * içerisine yerleştirilecek ve "getopt_long" fonksiyonu "0" ile geri
+                    * dönecektir. 
+                    * "length" seçeneği bulunursa, "getopt_long" fonksiyonu 'l' değeri 
+                    * ile geri dönecektir. 
+                    */
+                    int count_flag = 0;
+                    struct option long_options[] = {
+                        {"length", no_argument, &count_flag, 'l'},
+                        {"count", required_argument, NULL, 'c'},
+                        {0, 0, 0, 0}
+                    };
+                    const char* short_options = "abc:";
+                    
+                    int a_flag, b_flag, c_flag, l_flag, error_flag;
+                    a_flag = b_flag = c_flag = l_flag = error_flag = 0;
+                    
+                    char* c_arg;
+                    
+                    opterr = 0;
+                    
+                    int result;
+                    while((result = getopt_long(argc, argv, short_options, long_options, NULL)) != -1){
+                        switch(result){
+                            case 'a' : a_flag = 1; break; 
+                            case 'b' : b_flag = 1; break;
+                            case 'c' : 
+                            /*
+                            * "count" uzun seçeneği veya "c" kısa seçeneği bulunursa,
+                            * ilgili fonksiyon "c" değeri ile geri dönecektir. Böylelikle
+                            * bir uzun seçenek ile bir kısa seçeneği birbirinin alternatifi
+                            * haline getirmiş olduk. 
+                            */
+                            c_flag = 1; c_arg = optarg; break;
+                            case 0 : printf("--length is called\n"); break;
+                            case '?' : {
+                                error_flag = 1;
+                                if(optopt == 'c')
+                                    fprintf(stderr, "-c or --count is used w/o an argument!...\n");
+                                else if(optopt == 0)
+                                    fprintf(stderr, "invalid long option!...\n");
+                                else if(optopt != 0)
+                                    fprintf(stderr, "invalid short option: -%c\n", optopt);
+                                else
+                                    fprintf(stderr, "FATAL ERROR!...\n"); exit(EXIT_FAILURE);
+                            }
+                        }   
+                    }
+                    
+                    if(error_flag)
+                        exit(EXIT_FAILURE);
+                        
+                    if(a_flag)
+                        printf("-a option is used...\n");
+                    if(b_flag)
+                        printf("-b option is used...\n");
+                    if(c_flag)
+                        printf("-c or --count option is used with [%s]...\n", c_arg);
+                    if(count_flag)
+                        printf("--length is used...\n");
+                    
+                    if(optind != argc)
+                        puts("Arguments w/o Options:");
+                    for(int i = optind; i < argc; ++i)
+                        printf("%s\n", argv[i]);
+                    
+                    return 0;
+                }
+
+            * Örnek 2, Bu örnekte ise bir yada birden fazla dosyanın içeriği görüntülenebilir. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <unistd.h>
+                #include <getopt.h>
+
+                #define DEF_LINE                10
+                #define HEX_OCTAL_LINE_LEN      16
+
+                int print_text(FILE *f, int nline);
+                int print_hex_octal(FILE *f, int nline, int hexflag);
+
+                int main(int argc, char *argv[])
+                {
+                    int result, err_flag = 0;
+                    int x_flag = 0, o_flag = 0, t_flag = 0, top_flag = 0, header_flag = 0;
+                    char *top_arg;
+                    struct option options[] = {
+                        {"top", optional_argument, NULL, 1},
+                        {"header", no_argument, NULL, 'h'},
+                        {0, 0, 0, 0}
+                    };
+                    FILE *f;
+                    int i, nline = -1;
+
+                    opterr = 0;
+                    while ((result = getopt_long(argc, argv, "xoth", options, NULL)) != -1) {
+                        switch (result) {
+                        case 'x':
+                            x_flag = 1;
+                            break;
+                        case 'o':
+                            o_flag = 1;
+                            break;
+                        case 't':
+                            t_flag = 1;
+                            break;
+                        case 'h':
+                            header_flag = 1;
+                            break;
+                        case 1:
+                            top_flag = 1;
+                            top_arg = optarg;
+                            break;
+                        case '?':
+                            if (optopt != 0)
+                                fprintf(stderr, "invalid switch: -%c\n", optopt);
+                            else
+                                fprintf(stderr, "invalid switch: %s\n", argv[optind - 1]);  /* argv[optind - 1] dokümante edilmemiş */
+                            err_flag = 1;
+                        }
+                    }
+
+                    if (err_flag)
+                        exit(EXIT_FAILURE);
+
+                    if (x_flag + o_flag + t_flag > 1) {
+                        fprintf(stderr, "only one option must be specified from -o, -t, -x\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    if (x_flag + o_flag + t_flag == 0)
+                        t_flag = 1;
+
+                    if (top_flag)
+                        nline = top_arg != NULL ? (int)strtol(top_arg, NULL, 10) : DEF_LINE;
+
+                    if (optind == argc) {
+                        fprintf(stderr, "at least one file must be specified!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    for (i = optind; i < argc; ++i) {
+                        if ((f = fopen(argv[i], "rb")) == NULL) {
+                            fprintf(stderr, "cannot open file: %s\n", argv[i]);
+                            continue;
+                        }
+
+                        if (header_flag)
+                            printf("%s\n\n", argv[i]);
+
+                        if (t_flag)
+                            result = print_text(f, nline);
+                        else if (x_flag)
+                            result = print_hex_octal(f, nline, 1);
+                        else
+                            result = print_hex_octal(f, nline, 0);
+
+                        if (i != argc - 1)
+                            putchar('\n');
+
+                        if (!result)
+                            fprintf(stderr, "cannot read file: %s\n", argv[i]);
+
+                        fclose(f);
+                    }
+
+                    return 0;
+                }
+
+                int print_text(FILE *f, int nline)
+                {
+                    int ch;
+                    int count;
+
+                    if (nline == -1)
+                        while ((ch = fgetc(f)) != EOF)
+                            putchar(ch);
+                    else {
+                        count = 0;
+                        while ((ch = fgetc(f)) != EOF && count < nline) {
+                            putchar(ch);
+                            if (ch == '\n')
+                                ++count;
+                        }
+                    }
+
+                    return !ferror(f);
+                }
+
+                int print_hex_octal(FILE *f, int nline, int hexflag)
+                {
+                    int ch, i, count;
+                    const char *off_str, *ch_str;
+
+                    off_str = hexflag ? "%07X " : "%012o";
+                    ch_str = hexflag ? "%02X%c" : "%03o%c";
+
+                    if (nline == -1)
+                        for (i = 0; (ch = fgetc(f)) != EOF; ++i) {
+                            if (i % HEX_OCTAL_LINE_LEN == 0)
+                                printf(off_str, i);
+                            printf(ch_str, ch, i % HEX_OCTAL_LINE_LEN == HEX_OCTAL_LINE_LEN - 1 ? '\n' : ' ');
+                        }
+
+                    else {
+                        count = 0;
+                        for (i = 0; (ch = fgetc(f)) != EOF && count < nline; ++i) {
+                            if (i % HEX_OCTAL_LINE_LEN == 0)
+                                printf(off_str, i);
+                            printf(ch_str, ch, i % HEX_OCTAL_LINE_LEN == HEX_OCTAL_LINE_LEN - 1 ? '\n' : ' ');
+                            if (ch == '\n')
+                                ++count;
+                        }
+                    }
+
+                    if (i % HEX_OCTAL_LINE_LEN != 0)
+                        putchar('\n');
+
+                    return !ferror(f);
+                }
+
+> Hatırlatıcı Notlar:   
+    >> Eğer isteğe bağlı argümanlı bir uzun seçenek "getopt_long" ile bulunmuşsa fakat bu seçenek için argüman geçilmemişse, "optarg"
+    değişkeni "NULL" değerini alacaktır. 
+
+    >> "Visual Studio" üzerinden komut satırı argümanı belirtmek için
+        
+        "<Proje İsmi> / Proje Özellikleri / Yapılandırma Özellikleri / Hata Ayıklama" 
+
+    kısmına gelip "Bağımsız Komut Değişkenleri" özelliğine ilgili argümanları aralarında boşluk bırakarak geçmeliyiz. Eğer "shell"
+    programı üzerinden girmek istiyorsak, o anki çalışma dizinimiz ilgili ".exe" dosyasının bulunduğu dizin olmalıdır. Sonrasında 
+
+        "sample ..\test.txt mest.txt" 
+
+    biçimindeki bir komut çalıştırarak, bir önceki dizin içerisinde bulunan "test.txt" isimli dosyayı şu anki dizinimize "mest.txt" 
+    ismi ile kopyalamış oluyoruz. 
+
+    >> UNIX/Linux dünyasında, "shell" programı üzerinden "man" komutu ile bir komuta ilişkin döküman araştırırken ya da internet 
+    üzerinden kaynağını incelerken "(1)" ibaresinin olması o komutun birinci ciltte arandığını, "(2)" ibaresinin olması ise ikinci 
+    ciltte arandığını ve "(3)" ibaresinin olması ise üçüncü ciltte arandığını belirtir. Genellikle birinci cilttekiler komut satırı
+    halini, ikinci cilttekiler sistem fonksiyonu çağıran halini ve üçüncü cilttekiler ise sistem fonksiyonu çağırmayan halini belirtir. 
+
+    >> Aslında UNIX/Linux sistemlerinde komut satırından dosyaların erişim haklarını değiştirmek için kullanılan "chmod" isimli bir POSIX 
+	komutu vardır. Tabii bu komut /bin dizinine yerleştirilmiş bir programdır ve bu program da aslında chmod POSIX fonksiyonu kullanılarak 
+	yazılmıştır. Komutun değişik kullanım biçimleri vardır. Örneğin:
+
+        chmod 666 x.dat y.dat
+        chmod a+w x.dat
+        chmod +w x.dat
+        chmod o+w x.dat
+        chmod ugo-w x.dat
+
+	Komutun detaylı kullanımı için uygun dokümanlara başvurabilirsiniz. 
+
+    >> Komut satırında da dizin yaratmakl için "mkdir" isimli bir POSIX komutu bulunmaktadır. mkdir komurunda -m ya da --mode ile erişim hakları verilmezse komut default olarak tüm erişim haklarını prosesin umask
+    değerine sokarak oluşturmaktadır. Ancak -m ya da --mode seçeneği ile açıkça erişim hakları verilirse umask değeri dikkate alınmamaktadır. 
+
+    >> Komut satrtından bir dizini silmek için "rmdir" isimli POSIX fonksiyonu da kullanılmaktadır. Tabii rmdir komutu aslında /bin dizinindeki bir programdır. Bu program rmdir POSIX fonksiyonu kullanılarak
+    yazılmıştır. 
+
+    >> 	UNIX/Linux sistemlerinde stat fonksiyonunun yanı sıra stat isimli bir kabuk komutu da vardır. Bu komut dosyaların stat bilgilerini elde edip onları yazdırmaktadır. Komutun örnek bir kullanımı ve çıktısı
+    şöyledir:
+
+        $ stat sample.c
+        Dosya: sample.c
+        Boyut: 2008      	Bloklar: 8          Kimlik bloku: 4096   normal dosya
+        Device: 803h/2051d	Inode: 280141      Links: 1
+        Erişim: (0644/-rw-r--r--)  Uid: ( 1000/    kaan)   Gid: ( 1000/   study)
+        Erişim: 2023-08-12 19:28:23.516502007 +0300
+        Değiştirme: 2023-08-12 19:28:23.500502009 +0300
+        Değişiklik: 2023-08-12 19:28:23.500502009 +0300
+        Doğum: 2023-06-11 19:48:04.987271791 +0300
+ 

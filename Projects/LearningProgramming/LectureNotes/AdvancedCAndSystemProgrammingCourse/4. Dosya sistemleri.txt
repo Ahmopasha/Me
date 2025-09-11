@@ -1,0 +1,1006 @@
+> İşletim Sistemlerinin Dosya Sistemleri: İşletim sistemlerinin dosya işlemleri ile ilgilenen alt sistemlerine Dosya Sistemleri("File System")
+denmektedir. Bu sistem, dosyaların ikinci bellekteki organizasyonu ve onların kullanımına ilişkin temel işlemleri yerine getirmektedir. Bunun için 
+bir grup sistem fonksiyonu bulunmaktadır. Bu sistem fonksiyonları toplamda 5 gruba ayrılmıştır. Bunlar dosyayı açmak, dosyayı kapatmak, dosyadan 
+okuma yapmak, dosyaya yazmak ve dosya göstericisini konumlandırmak içindir. Hangi programlama dilini kullanırsak kullanalım, işletim sistemi 
+değişmediği müddetçe, yine bu sistem fonksiyonları çağrılmaktadır. Buradaki bütün sorumluluk işletim sistemine aittir. Yine buradaki kullanım 
+sırasıda şu şekilde olmalıdır: Standart C > POSIX / Windows API > Sistem Fonksiyonlar. Windows API ve POSIX fonksiyonlarının karşılaştırması
+ise aşağıdaki gibidir:
+
+    İşlevi                                  Windows API     -   POSIX
+    Dosyya Açmak                            CreateFile      -   open
+    Dosyadan Okuma Yapmak                   ReadFile        -   read
+    Dosyaya Yazmak                          WriteFile       -   write
+    Dosya Göstericisini Konumlandırmak      SetFilePointer  -   lseek
+    Dosyayı Kapatmak                        CloseHandle     -   close    
+
+Şimdi de bu fonksiyonları incelemeye başlayalım:    
+    >> Windows API fonksiyonları: 
+        >>> "CreateFile" : Bir dosya açmak veya oluşturmak için kullanılır. Fonksiyonun prototipi aşağıdaki gibidir.
+
+            HANDLE CreateFileA(
+                LPCSTR                lpFileName,               
+                DWORD                 dwDesiredAccess,
+                DWORD                 dwShareMode,
+                LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+                DWORD                 dwCreationDisposition,
+                DWORD                 dwFlagsAndAttributes,
+                HANDLE                hTemplateFile
+            );
+
+            -> Fonksiyonun birinci parametresi, açılacak olan dosyanın yol ifadesidir.
+            -> Fonksiyonun ikinci parametresi, bu dosyayı açma niyetimizdir. Bu parametreye ya "GENERIC_READ", "GENERIC_WRITE"
+            veya "GENERIC_READ | GENERIC_WRITE" değerlerinden birisi geçilmelidir. Sırasıyla okuma, yazma ve hem okuma hem yazma 
+            amacı taşımaktadır. 
+            -> Fonksiyonun üçüncü parametresi, dosyayı açmamız halinde, başkalarının bu dosya üzerinde hangi işlemleri yapabileceğini
+            belirten parametredir. Bu parametre ise şu argümanları almaktadır: "FILE_SHARE_DELETE", "FILE_SHARE_READ" ve "FILE_SHARE_WRITE".
+            Bu argümanlar ise açtığımız dosyamız üzerinde sırasıyla silme, okuma ve yazma işlemi yapmasına imkan vermektedir. Tabii bu
+            değerlerden birisini girmek zorunda değiliz. Bu değerleri "bit-wise OR" işlemine tabii tutarak da fonksiyona gönderebiliriz.
+            Eğer bu parametreye "0" değerini geçersek, başka bir proses dosyayı açamayacaktır. 
+            -> Fonksiyonun dördüncü parametresi, "Security Attributes" konusu ile alakalıdır. Bu konuya kursta değinilmeyeceği 
+            için "NULL" değerini geçeceğiz. Böylelikle ilgili "attribute" nesnesi kullanılmamış, varsayılan değerler kullanılmış 
+            olacaktır. Fakat kabaca belirtmek gerekirse; bu parametre sayesinde belirli kullanıcıların dosyayı açabilmesini ancak
+            diğerlerinin açamamasını sağlayabiliriz.
+            -> Fonksiyonun beşinci parametresi, bir nevi şöyle bir parametredir: bu dosya varsa ne yapayım, yoksa ne yapayım. 
+            Bu parametreye şu argümanlardan birisini geçebiliriz: "OPEN_EXISTING", "CREATE_NEW", "OPEN_ALWAYS", "CREATE_ALWAYS",
+            "TRUNCATE_EXISTING". 
+
+                -> "OPEN_EXISTING"     : Dosya yoksa fonksiyon başarısız olacaktır. Ancak halihazırda var olan bir dosya açılabilir.    
+                -> "CREATE_NEW"        : Olmayan dosyanın oluşturulmasını sağlar ve dosyayı açar. Eğer dosya halihazırda varsa fonksiyon
+                başarısız olur. Yani dosyanın açılabilmesi için var olmaması GEREKMEKTEDİR. 
+                -> "OPEN_ALWAYS"       : Dosya varsa açılır. Yoksa oluşturulur ve açılır. 
+                -> "CREATE_ALWAYS"     : Dosya yoksa oluşturulur ve açılır. Dosya varsa sıfırlanarak açılır.
+                -> "TRUNCATE_EXISTING" : Dosya yoksa fonksiyon başarısız olur. Dosya varsa sıfırlanarak açılır. 
+
+            -> Fonksiyonun altıncı parametresi, bir "attribute" parametresidir. Dosya oluşturulacaksa veya varolan açılacaksa farklı 
+            argümanlar geçmeliyiz. Örneğin, dosyayı sıfırdan oluşturacaksak "FILE_ATTRIBUTE_NORMAL" değerini geçebiliriz. Eğer halihazırda 
+            varolan bir dosyayı açacaksak, "0" değerini geçebiliriz. 
+            -> Fonksiyonun yedinci parametresi ise daha önce açılmış olan dosynın "HANDLE" değerini almaktadır. Böylelikle dosyayı açarken, 
+            bu "HANDLE" değeri kullanılarak zaten açılmış olan dosya referans alınacaktır. Bu istenmiyorsa, bu parametreye "NULL" değerini 
+            geçebiliriz. 
+            -> Fonksiyonun geri dönüş değeri ise bir "HANDLE" değeridir, başarı durumunda. Hata durumunda ise "INVALID_HANDLE_VALUE" değerine 
+            geri dönmektedir. Bu değer "NULL" göstericisi DEĞİLDİR, özel bir değerdir.  
+
+            * Örnek 1, Aşağıdaki program ile varolan bir dosya açılmaya çalışılmıştır. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                int main(void){
+                    HANDLE hFile;
+                    if((hFile = CreateFile("sample.c", GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE){
+                        fprintf(stderr, "CreateFile failed! : %lu\n", GetLastError());
+                        exit(EXIT_FAILURE);
+                    }
+
+                    puts("Ok...");
+                }
+            
+            * Örnek 2, Aşağıdaki program ile bir dosyanın sıfırdan oluşturulması hedeflenmiştir. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                int main(void){
+                    HANDLE hFile;
+                    if((hFile = CreateFile("test.txt", GENERIC_WRITE, 0, NULL, CREATE_NEW, 0, NULL)) == INVALID_HANDLE_VALUE){
+                        fprintf(stderr, "CreateFile failed! : %lu\n", GetLastError());
+                        exit(EXIT_FAILURE);
+                    }
+
+                    puts("Ok...");
+                }
+        
+        >>> "CloseHandle" : Halihazırda açık olan bir dosyayı kapatmak için kullanılır. Fonksiyonun prototipi aşağıdaki gibidir. 
+
+            BOOL CloseHandle(
+                HANDLE hObject
+            );
+
+            -> Fonksiyon açık dosyaya ilişkin "HANDLE" değerini parametre olarak alacaktır. 
+            -> Fonksiyonun geri dönüş değeri başarı durumunda "non-zero", hata durumunda ise "0" değerine geri 
+            dönmektedir. Bu fonksiyonun geri dönüş değerinin kontrolüne de gerek yoktur. Çünkü argüman olarak 
+            geçilen değerin bozulmadığından eminsek, fonksiyon başarısız olma lüksü yoktur. 
+
+        Bir diğer yandan, eğer prosesimiz sonlanacaksa, o dosyayı özel olarak kapatmaya gerek yoktur çünkü proses sonlanırken zaten açık olan
+        dosyalar da kapatılacaktır. 
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                int main(void){
+                    HANDLE hFile;
+                    if((hFile = CreateFile("test.txt", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_ALWAYS, 0, NULL)) == INVALID_HANDLE_VALUE){
+                        fprintf(stderr, "CreateFile failed! : %lu\n", GetLastError());
+                        exit(EXIT_FAILURE);
+                    }
+
+                    puts("Ok...");
+
+                    CloseHandle(hFile);
+                }
+
+        >>> "ReadFile" : Bir dosyadan okuma yapmak için kullanılır. Fonksiyonun prototipi aşağıdaki gibidir. 
+
+            BOOL ReadFile(
+                HANDLE       hFile,
+                LPVOID       lpBuffer,
+                DWORD        nNumberOfBytesToRead,
+                LPDWORD      lpNumberOfBytesRead,
+                LPOVERLAPPED lpOverlapped
+            );
+
+            -> Fonksiyonun birinci parametresi, açık dosyaya ilişkin "HANDLE" değeridir. 
+            -> Fonksiyonun ikinci parametresi, aslında dosyadan okunan bilgilerin yerleştirileceği 
+            alanın başlangıç adresidir. 
+            -> Fonksiyonun üçüncü parametresi, dosya göstericisinin konumundan itibaren okunacak 
+            toplam "byte" sayısını belirtmektedir. 
+            -> Fonksiyonun dördüncü parametresi, gerçekte okunan "byte" miktarının yazılacağı adres 
+            bilgisidir. Fonksiyon başarılı olmuşsa fakat buradaki adrese yazılan değer de "0" ise 
+            "EOF" konumuna gelindiğini belirtmektedir.Öte yandan bu sistemlerde okunmak istenen
+            "byte" miktarı ile gerçekte okunan "byte" miktarı ARASINDA FARK OLMASI NORMAL
+            KARŞILANMAKTADIR.
+            -> Fonksiyonun beşinci parametresi, "Asincron IO" işlemleri için kullanılmaktadır. Bu 
+            parametre "NULL" değer geçilebilir. 
+            -> Fonksiyonun geri dönüş değeri başarı durumunda "non-zero", başarısızlık durumunda "zero"
+            değerine geri dönmektedir.     
+
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                int main(void)
+                {
+                    HANDLE hFile;
+                    if((hFile = CreateFile("test.txt", GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE){
+                        fprintf(stderr, "CreateFile failed! : %lu\n", GetLastError());
+                        exit(EXIT_FAILURE);
+                    }
+
+                    puts("Ok...");
+
+                    char buffer[10 + 1];
+                    DWORD dwRead;
+                    if(!ReadFile(hFile, buffer, 10, &dwRead, NULL)){
+                        fprintf(stderr, "ReadFile failed! : %lu\n", GetLastError());
+                        exit(EXIT_FAILURE);   
+                    }
+
+                    buffer[dwRead] = '\0';
+
+                    puts(buffer);
+
+                    puts("Ok...");
+                    
+                    CloseHandle(hFile);
+                }
+
+            * Örnek 2,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                #define BUFFER_SIZE    10
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    HANDLE hFile;
+                    if((hFile = CreateFile("test.txt", GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE){
+                        fprintf(stderr, "CreateFile failed! : %lu\n", GetLastError());
+                        exit(EXIT_FAILURE);
+                    }
+                    
+                    puts("Ok...");
+
+                    char buffer[BUFFER_SIZE + 1];
+                    DWORD dwRead;
+                    BOOL bResult;
+                    while((bResult = ReadFile(hFile, buffer, BUFFER_SIZE, &dwRead, NULL)) != 0 && dwRead > 0){
+                    buffer[dwRead] = '\0';
+                        printf("%s\n", buffer);
+                    }
+
+                    if(!bResult){
+                        ExitSys("ReadFile");
+                    }
+
+                    puts("Ok...");
+                    
+                    CloseHandle(hFile);
+                }
+
+                void ExitSys(LPCSTR lpszMsg){
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr; 
+                    if(
+                        FormatMessage(
+                            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                            NULL,
+                            dwLastErr,
+                            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                            (LPTSTR)&lpszErr,
+                            0,
+                            NULL
+                        )
+                    )
+                    {
+                        fprintf(stderr, "%s : %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "WriteFile" : Bir dosyaya yazma yapmak için kullanılır. "ReadFile" fonksiyonuna çok benzerdir. Sadece transferin yönü değişmektedir.
+        Fonksiyonun parametresi aşağıdaki gibidir.
+
+            BOOL WriteFile(
+                HANDLE       hFile,
+                LPCVOID      lpBuffer,
+                DWORD        nNumberOfBytesToWrite,
+                LPDWORD      lpNumberOfBytesWritten,
+                LPOVERLAPPED lpOverlapped
+            );
+
+            -> Fonksiyonun parametrik yapısı neredeyse "ReadFile" ile aynıdır. Sadece ikinci parametreye, dosyaya yazılacak 
+            bilgilerin nereden okunduğunu belirten adresi geçmemiz gerekmektedir. Bu yüzden bu parametre "const" olarak 
+            betimlenmiştir. 
+            -> Yine üçüncü ve dördüncü parametre sırasıyla dosyaya yazılmak istenen "byte" miktarı ve yazılan "byte" miktarını 
+            belirtmektedir. Bellekte yer kalmaması durumunda, artık istenilen büyüklükten daha az büyüklükte "byte" yazılacaktır. 
+            -> Birinci, beşinci parametreler ve fonksiyonun geri dönüş değeri "ReadFile" ile aynıdır. 
+
+            * Örnek 1,
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <string.h>
+                #include <windows.h>
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                /*
+                    # OUTPUT #
+                */
+                
+                HANDLE hFile;
+                if((hFile = CreateFile("test.txt", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE){
+                    ExitSys("CreateFile");
+                }
+                
+                puts("Ok...");
+
+                char buffer[] = "Ulya Yuruk";
+                DWORD dwWrite;
+                if(!WriteFile(hFile, buffer, strlen(buffer), &dwWrite, NULL))
+                    ExitSys("WriteFile");
+                
+                puts("Ok...");
+                
+                CloseHandle(hFile);
+                }
+
+                void ExitSys(LPCSTR lpszMsg){
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr; 
+                    if(
+                        FormatMessage(
+                            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                            NULL,
+                            dwLastErr,
+                            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                            (LPTSTR)&lpszErr,
+                            0,
+                            NULL
+                        )
+                    )
+                    {
+                        fprintf(stderr, "%s : %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "SetFilePointer" : Dosya konum göstericisini yeniden konumlandırmak için kullanılır. Fonksiyonun prototipi aşağıdaki gibidir. 
+
+            DWORD SetFilePointer(
+                HANDLE hFile,
+                LONG   lDistanceToMove,
+                PLONG  lpDistanceToMoveHigh,
+                DWORD  dwMoveMethod
+            );
+
+            -> Fonksiyonun birinci parametresi, açık dosyaya ilişkin "HANDLE" değeridir. 
+            -> Fonksiyonun ikinci ve üçüncü parametresi, konumlandırmaya ilişkin "offset" belirtmektedir. İkinci parametre 
+            konumlandırma "offset" değerinin düşük anlamlı 32-bit'lik değerini belitmektedir. Eğer üçüncü parametreye 
+            "NULL" değeri geçilirse, konumlandırma ancak dört "byte" lık "offset" temelinde yapılacaktır. Aksi halde ikinci 
+            ve üçüncü parametreler 64-bit'lik bir "offset" belirtmektedir. 
+            -> Fonksiyonun dördüncü parametresi, konumlandırmanın nereden itibaren yapılacağını belirtmektedir. Yani bir orjin 
+            belirtmektedir ki şu değerlerden birisi olabilir: "FILE_BEGIN", "FILE_CURRENT" ve "FILE_END". 
+
+                -> "FILE_BEGIN" : Konumlandırma dosyanın başından itibaren yapılır. 
+                -> "FILE_CURRENT" : Konumlandırma, dosya göstericisinin o andaki "offset" değerine göre yapılmaktadır. 
+                -> "FILE_END" : Konumlandırma "EOF" konumuna göre yapılmaktadır. 
+
+            -> Fonksiyon başarı durumunda konumlandırılmış olan "offset" in, dosyanın başından itibaren yerine geri dönmektedir. 
+            Eğer üçüncü parametreye "NULL" değeri geçilmemişse, konumlandırmanın yapıldığı "offset" in yüksek anlamlı 32-bit'Lik 
+            değeri buraya geçilen adrese yazılmaktadır. Fonksiyon başarısız olduğunda "INVALID_SET_FILE_POINTER" özel değerine 
+            geri dönmektedir. Ancak bu değer geçerli bir "offset" değeri de olabilmektedir. MSDN standartlarına göre, fonksiyon 
+            başarısız olduğunda, "GetLastError" fonksiyonundan elde edilen değerin "NO_ERROR" dışında bir değer olduğunu garanti 
+            etmektedir. 
+
+            * Örnek 1, Aşağıdaki örnekte dosyanın sonuna ilgili yazı eklenmiştir. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    HANDLE hFile;
+                    if((hFile = CreateFile("test.txt", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE){
+                        fprintf(stderr, "CreateFile failed! : %lu\n", GetLastError());
+                        exit(EXIT_FAILURE);
+                    }
+
+                    puts("Ok...");
+
+                if(SetFilePointer(hFile, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR){
+                    ExitSys("SetFilePointer");
+                }
+
+                    char buffer[] = "Ulya Yuruk";
+                    DWORD dwWrite;
+                    if(!WriteFile(hFile, buffer, strlen(buffer), &dwWrite,NULL))
+                    ExitSys("WriteFile");
+
+                    puts(buffer);
+
+                    puts("Ok...");
+                    
+                    CloseHandle(hFile);
+                }
+
+                void ExitSys(LPCSTR lpszMsg){
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr; 
+                    if(
+                        FormatMessage(
+                            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                            NULL,
+                            dwLastErr,
+                            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                            (LPTSTR)&lpszErr,
+                            0,
+                            NULL
+                        )
+                    )
+                    {
+                        fprintf(stderr, "%s : %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+            * Örnek 2, Aşağıdaki örnekte dosya konum göstericisi "EOF" konumuna alınmış, daha sonra 64-bit "offset" ile "-2" değeri
+            kullanılarak 2 birim geriye konumlandırılmıştır. Bu noktadan okuma yapıldığında, dosyanın sonundaki son iki "byte" 
+            okunmuş olacaktır. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <windows.h>
+
+                #define BUFFER_SIZE  512
+
+                void ExitSys(LPCSTR lpszMsg);
+
+                int main(void)
+                {
+                    HANDLE hFile;
+                    if((hFile = CreateFile("test.txt", GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE){
+                        fprintf(stderr, "CreateFile failed! : %lu\n", GetLastError());
+                        exit(EXIT_FAILURE);
+                    }
+
+                    puts("Ok...");
+
+                    if(SetFilePointer(hFile, 0, NULL, FILE_END) == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR){
+                        ExitSys("SetFilePointer");
+                    }
+
+                    // WAY - I
+                    LONG high = -1;
+                    if(SetFilePointer(hFile, -2, &high, FILE_CURRENT) == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR){
+                        ExitSys("SetFilePointer");
+                    }
+
+                    /*  // WAY - II
+                        long long offset;
+                        long high = (long)(offset >> 32);
+                        if(SetFilePointer(hFile, offset & 0xFFFFFFFF, &high, FILE_CURRENT) == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR){
+                            ExitSys("SetFilePointer");
+                        }                       
+                    */
+
+                    char buffer[BUFFER_SIZE + 1];
+                    DWORD dwRead;
+                    if(!ReadFile(hFile, buffer, BUFFER_SIZE, &dwRead,NULL))
+                        ExitSys("ReadFile");
+
+                    buffer[dwRead] = '\0'; 
+
+                    puts(buffer);
+
+                    puts("Ok...");
+                    
+                    CloseHandle(hFile);
+                }
+
+                void ExitSys(LPCSTR lpszMsg){
+                    DWORD dwLastErr = GetLastError();
+                    LPTSTR lpszErr; 
+                    if(
+                        FormatMessage(
+                            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                            NULL,
+                            dwLastErr,
+                            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                            (LPTSTR)&lpszErr,
+                            0,
+                            NULL
+                        )
+                    )
+                    {
+                        fprintf(stderr, "%s : %s", lpszMsg, lpszErr);
+                        LocalFree(lpszErr);
+                    }
+
+                    exit(EXIT_FAILURE);
+                }
+
+            Buradaki "offset" değeri 64-bitlik biçimde oluşturulmuştur. Bunu yaparken yüksek anlamlı ve düşük anlamlı 
+            olmak üzere bitleri iki grup 32-bit haline getirmemiz gerekmektedir. Örneğin, 64-bit "offset" olarak "-2" değerini 
+            şöyle oluşturabiliriz:
+
+                FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFE 
+
+            Buradaki yüksek anlamlı 32-bit, "decimal" olarak, "-1" değerini ifade ederken düşük anlamlı 32-bit ise "-2" değerini 
+            ifade etmektedir. 
+    
+    Şimdi de bu fonksiyonları kullandığımız örnekleri inceleyelim: bir dosyayı kopyalan program yazalım:
+        * Örnek 1, Aşağıdaki program bir dosyayı kopyalamaktadır. Kullanılan "BUFFER_SIZE" büyüklüğünün ilgili işletim sistemindeki disk blok
+        büyüklüğü ile aynı büyüklük olarak belirlenmesi genellikle performansı arttırmaktadır.  
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <string.h>
+            #include <windows.h>
+
+            #define  BUFFER_SIZE       512
+            #define  SOURCE_FILE_PATH  "source.txt"
+            #define  DEST_FILE_PATH    "dest.txt"
+
+            void ExitSys(LPCSTR lpszMsg);
+
+            int main(void)
+            {
+                HANDLE hFileSource, hFileDest;
+                if((hFileSource = CreateFile(SOURCE_FILE_PATH, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE){
+                    ExitSys("CreateFile");
+                }
+
+                if((hFileDest = CreateFile(DEST_FILE_PATH, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL)) == INVALID_HANDLE_VALUE){
+                    ExitSys("CreateFile");
+                }
+
+                BOOL bResult;
+                DWORD dwRead, dwWrite;
+                char buffer[BUFFER_SIZE];
+                while((bResult = ReadFile(hFileSource, buffer, BUFFER_SIZE, &dwRead, NULL)) != 0 && dwRead > 0){
+                    if(!WriteFile(hFileDest, buffer, dwRead, &dwWrite)){
+                        ExitSys("WriteFile");
+                    }
+
+                    if(dwWrite != dwRead){
+                        fprintf(stderr, "Partial write error!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+
+                if(!bResult){
+                    ExitSys("ReadFile");
+                }
+
+                CloseHandle(hFileDest);
+                CloseHandle(hFileSource);
+            }
+
+            void ExitSys(LPCSTR lpszMsg){
+                DWORD dwLastErr = GetLastError();
+                LPTSTR lpszErr; 
+                if(
+                    FormatMessage(
+                        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                        NULL,
+                        dwLastErr,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                        (LPTSTR)&lpszErr,
+                        0,
+                        NULL
+                    )
+                )
+                {
+                    fprintf(stderr, "%s : %s", lpszMsg, lpszErr);
+                    LocalFree(lpszErr);
+                }
+
+                exit(EXIT_FAILURE);
+            }
+
+        * Örnek 2, Aşağıdaki örnekte ise ilgili program dosya isimlerini komut satırından almaktadır. 
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <string.h>
+            #include <windows.h>
+
+            #define  BUFFER_SIZE       512
+
+            void ExitSys(LPCSTR lpszMsg);
+
+            int main(int argc, char** argv)
+            {
+                if(3 != argc){
+                    fprintf(stderr, "Wrong number of arguments!..\n");
+                    exit(EXIT_FAILURE);
+                }
+                
+                HANDLE hFileSource, hFileDest;
+                if((hFileSource = CreateFile(argv[1], GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL)) == INVALID_HANDLE_VALUE){
+                    ExitSys("CreateFile");
+                }
+
+                if((hFileDest = CreateFile(argv[2], GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL)) == INVALID_HANDLE_VALUE){
+                    ExitSys("CreateFile");
+                }
+
+                BOOL bResult;
+                DWORD dwRead, dwWrite;
+                char buffer[BUFFER_SIZE];
+                while((bResult = ReadFile(hFileSource, buffer, BUFFER_SIZE, &dwRead, NULL)) != 0 && dwRead > 0){
+                    if(!WriteFile(hFileDest, buffer, dwRead, &dwWrite)){
+                        ExitSys("WriteFile");
+                    }
+
+                    if(dwWrite != dwRead){
+                        fprintf(stderr, "Partial write error!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+
+                if(!bResult){
+                    ExitSys("ReadFile");
+                }
+
+                CloseHandle(hFileDest);
+                CloseHandle(hFileSource);
+            }
+
+            void ExitSys(LPCSTR lpszMsg){
+                DWORD dwLastErr = GetLastError();
+                LPTSTR lpszErr; 
+                if(
+                    FormatMessage(
+                        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+                        NULL,
+                        dwLastErr,
+                        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                        (LPTSTR)&lpszErr,
+                        0,
+                        NULL
+                    )
+                )
+                {
+                    fprintf(stderr, "%s : %s", lpszMsg, lpszErr);
+                    LocalFree(lpszErr);
+                }
+
+                exit(EXIT_FAILURE);
+            }
+
+    Tabii Windows sistemlerinde, dosyayı açmadan direkt dosya kopyalaması yapan, "CopyFile" isminde bir fonksiyon daha vardır. Dolayısıyla
+    yukarıdaki örneklerde dosya açma/kapama sürelerini harcamak istemiyorsak, bu fonksiyonu kullanabiliriz. 
+
+    >> UNIX/Linux POSIX fonksiyonları: Bu fonksiyonların bildirimlerinin bulunduğu başlık dosyaları, Windows sistemlerine nazaran tek bir
+    dosya içerisinde değildir. Muhtelif başlık dosyalarında mevcutturlar. Dolayısıyla ilgili başlık dosyasının da eklenmesi gerekmektedir. 
+        >>> "open" : UNIX/Linux sistemlerinde var olan bir dosyayı açmak ya da yeni bir dosya yaratmak için open isimli POSIX fonksiyonu
+        kullanılmaktadır. Fonksiyonun prototipi şöyledir:
+
+            #include <fcntl.h>
+            int open(const char *path, int oflag, ...); 
+
+        "open" fonksiyonu ya iki argümanla ya da üç argümanla çağrılmaktadır. Eğer "open" fonksiyonu üç argümanla çağrılacaksa fonksiyon
+        sanki "mode_t" türünden bir üçüncü parametreye sahipmiş gibi çağrılmalıdır. Yani "open" fonksiyonu sanki aşağıdaki iki biçimden
+        biri gibi kullanılmaktadır:
+
+            int open(const char *path, int oflag);
+            int open(const char *path, int oflag, mode_t mode);
+
+        "open" fonksiyonun birinci parametresi açılacak dosyanın yol ifadesini almaktadır. İkinci parametre açış modunu belirtmektedir. Bu
+        ikinci parametre "O_XXX" biçimindeki sembolik sabitlerin "bit OR" işlemine sokulmasıyla oluşturulur. Bu ikinci parametrenin en
+        azından aşağıdakilerden yalnızca birini içermesi gerekmektedir:
+
+            "O_RDONLY"
+            "O_WRONLY"
+            "O_RDWR"	
+            "O_EXEC"
+            "O_SEARCH"
+
+        Bu sembolik sabitlerden,
+
+            -> "O_EXEC" ve "O_SEARCH" bayrakları sonnradan eklenmiştir. Biz bunların üzerinde durmayacağız.
+            
+            -> "O_RDONLY" "yalnızca okuma amaçlı", "O_WRONLY" "yalnızca yazma amaçlı", "O_RDWR" ise "hem okuma hem de yazma amaçlı" dosyayı
+            açma anlamına gelmektedir. Bu bayraklardan biri ile bazı bayraklar birlikte kullanılabilmektedir. 
+
+            -> "O_CREAT": Bu bayrak dosya yoksa dosyanın yaratılarak açılmasını sağlar. Ancak dosya varsa bu bayrağın hiçbir etkisi yoktur. Yani
+            olan dosya açılr. 
+
+            -> "O_TRUNC": Bu bayrak dosya varsa dosyanın içinin sıfırlanarak açılacağını belirtir. Dosya yoksa bu bayrağın bir etkisi yoktur.
+            Ancak bu bayrağın "O_WRONLY" ya da "O_RDWR" bayrağı ile kullanılıyor olması gerekmeketdir. Aksi takdirde tanımsız davranış söz konusu
+            olur. 
+
+            -> "O_EXCL": Bu bayrak "O_CREAT" bayrağı ile birlikte kullanılmak zorundadır. "O_CREAT|O_EXCL" ile "dosya yoksa onu yarat ancak dosya
+            varsa başarısız ol" anlamına gelmektedir. Böylec programcı var olmayan bir dosyayı kendisinin yarattığına emin olmaktadır. 
+
+            -> "O_APPEND": Bu modda eğer, bayraklar uygunsa, dosyanın herhangi bir yerinden okuma yapılabilir ancak tüm yazma işlemleri dosyanın
+            sonuna yapılacaktır. Başka bir deyişle yazma işleminden önce atomik bir biçimde dosya göstericisi "EOF" durumuna çekilmektedir. 
+
+        "open" fonksiyonunda eğer yeni bir dosyanın yataılma potansiyeli varsa (yani ikinci parametrede "O_CREAT" bayrağı belirtilmilşse) bu
+        durumda programcının fonksiyona "dosya erişim haklarını belirten" üçüncü bir argümanı girmesi gerekir. Bu konu izleyen paragraflarda
+        ele alınacaktır. Ancak yeni bir dosyanın yaratılması gibi bir potansil yoksa (yani ikinci parametrede "O_CREAT" kullanılmamışsa) bu
+        durumda programcı üçüncü argümanı girmemelidir. Tabii fonksiyonun ikinci aparametresinde "O_CREAT" bayrağı kullanılmışsa ancak dosya
+        zaten varsa bu durumda programcının girdiği üçüncü argüman fonksiyon tarafından kullanılmayacaktır. "open" fonksiyonu başarı durumunda
+        "dosya betimleyici (file descriptor)" denilen bir "handle" değerine başarısızlık durumunda ise "-1" değerine geri dönmektedir. Tipik
+        kullanım biçimi aşağıdaki gibidir:
+
+            int fd;
+            ...
+
+            if ((fd = open("test.txt", O_RDONLY)) == -1)
+                exit_sys("open");
+
+        >>> "close" : UNIX/Linux sistemlerinde dosyayı kapatmak için "close" isimli POSIX fonksiyonu kullanılmaktadır. "close" fonksiyonuyla
+        kapatılmamış olan dosyalar işletim sistemi tarafından proses sonlandığında otomatik biçimde kapatılmaktadır. Tabii açık dosyalar belli
+        bir sistem kaynağı harcarlar. Bir dosya ile işi biten programcının dosyayı kapatması iyi bir tekniktir. "close" fonksiyonun prototipi
+        şöyledir:
+
+            #include <unistd.h>
+            int close(int fd);
+
+        Fonksiyon dosya betimleyicisini parametre olarak alır ve dosyayı kapatır. Fonksiyon başarı durumunda "0" değerine, başarısızlık durumunda
+        "-1" değerine geri dönmektedir. Ancak fonksiyonun başarısının kontrol edilmesine çoğu kez gerek yoktur. 
+
+        >>> "read" : Dosyadan okuma yapmak için "read" isimli POSIX fonksiyonu kullanılmaktadır. Fonksiyonun prototipi şöyledir:
+
+            #include <unistd.h>
+            ssize_t read(int fd, void *buf, size_t nbyte);
+
+        Fonksiyonun birinci parametresi okuma işleminin yapılacağı dosyaya ilişkin dosya betimleyicini belirtmektedir. İkinci parametre okunan 
+        bilgilerin yerleştirileceği bellekteki transfer adresini belirtir. Üçüncü parametre ise okunmak istenen "byte" sayısını belirtmektedir. 
+        Fonksiyon başarı durumunda okunabilen "byte" sayısına, başarısızlık durumunda "-1" değerine geri dönmektedir. Fonksiyonun üçüncü
+        parametresine dosya göstericinin gösterdiği yerden dosya sonuna kadar var olan "byte" sayısından daha büyük bir değer girilirse fonksiyon
+        okuyabildiği kadar "byte" ı okur ve okuyabildiği "byte" sayısına geri döner. Eğer dosya göstericisi "EOF" durumundaysa bu durumda dosyadan
+        hiç "byte" okunamaz ve fonksiyon "0" ile geri döner. Tabii bu durum fonksiyonun başarısız olduğu anlamına gelmez. "read" fonksiyonu ile "0"
+        byte okunmak istenebilir. Bu durumda fonksiyon hata kontrollerini yapar, eğer bir hata söz konusu değilse "0" ile geri döner. Fonksiyonun
+        geri dönüş değerinin "ssize_t" türünden olduğuna dikkat ediniz. "ssize_t" standart C typedef ismi değildir. POSIX sistemlerinde
+        bulunmaktadır."ssize_t" türü "<unistd.h>" dosyası içerisinde ve "<sys/types.h>" dosyası içerisinde "typedef" edilmiştir. "ssize_t" aslında
+        "size_t" türünün işaretli versiyonu olarak bulundurmuştur.
+            * Örnek 1, Aşağıda bir dosyadan "BUFFER_SIZE" kadar bilgiler döngü içerisinde read fonksiyonu ile okunarak ekrana ("stdout" dosyasına)
+            yazıdırlmıştır.
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <fcntl.h>
+                #include <unistd.h>
+
+                #define BUFFER_SIZE     512
+
+                void exit_sys(const char *msg);
+
+                int main(int argc, char *argv[])
+                {
+                    int fd;
+                    char buf[BUFFER_SIZE + 1];
+                    ssize_t result;
+
+                    if (argc != 2) {
+                        fprintf(stderr, "wrong number of arguments!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if ((fd = open(argv[1], O_RDONLY)) == -1)
+                        exit_sys("open");
+
+                    while ((result = read(fd, buf, BUFFER_SIZE)) > 0) {
+                        buf[result] = '\0';
+                        printf("%s", buf);
+                    }
+
+                    if (result == -1)
+                        exit_sys("read");
+
+                    close(fd);
+
+                    return 0;
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "write" : UNIX/Linux sistemlerinde dosyaya yazma yapmak için "write" isimli POSIX fonksiyonu kullanılmaktadır. Fonksiyonun prototiği
+        şöyledir:
+
+            #include <unistd.h>
+            ssize_t write(int fd, const void *buf, size_t nbyte);
+
+        Fonksiyonun parametrik yapısı "read" fonksiyonundaki gibidir. "write" fonksiyonu da başarı durumunda yazılabilen "byte" sayısına
+        başarısızlık durumunda "-1" değerine geri dönmektedir. "write" fonksiyonu ile istediğimiz kadar "byte" ın tamamanın yazılaması disk
+        dosyaları için çok seyrek karşılaşılabilecek bir durumdur. "write" fonksiyonu ile de "0" "byte" yazılmak istenebilir. Bu durumda
+        fonksiyon bazı hata kontrollerini yapar. Eğer bir hata söz konusu olmazsa 0 değeri ile geri döner. 
+            * Örnek 1, Aşağıdaki örnekte var olan bir dosyanın başına write fonksiyonu ile bir yazı yazılmıştır. Hedef dosyanın yol ifadesi
+            komut satırı argümanı olarak alınmaktadır. 
+                #include <stdio.h>
+                #include <stdlib.h>
+                #include <string.h>
+                #include <fcntl.h>
+                #include <unistd.h>
+
+                void exit_sys(const char *msg);
+
+                int main(int argc, char *argv[])
+                {
+                    int fd;
+                    char buf[] = "this is a test";
+                    ssize_t result;
+                    size_t len;
+
+                    if (argc != 2) {
+                        fprintf(stderr, "wrong number of arguments!..\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    if ((fd = open(argv[1], O_WRONLY)) == -1)
+                        exit_sys("open");
+
+                    len = strlen(buf);
+                    if ((result = write(fd, buf, len)) == -1)
+                        exit_sys("write");
+
+                    if (result != len) {
+                        fprintf(stderr, "partial write error!...\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    close(fd);
+
+                    return 0;
+                }
+
+                void exit_sys(const char *msg)
+                {
+                    perror(msg);
+
+                    exit(EXIT_FAILURE);
+                }
+
+        >>> "lseek" : UNIX/Linux sistemlerinde dosya göstericisinin konumlandırılması için "lseek" isimli POSIX fonksiyonu kullanılmaktadır.
+        Fonksiyonun prototipi şöyledir:
+
+            #include <unistd.h>
+            off_t lseek(int fd, off_t offset, int whence);
+
+        Fonksiyon C'nin "fseek" fonksiyonuna çok benzemektedir. Fonksiyonun birinci parametresi dosya betimleyicisini, ikinci parametresi
+        konumlandırma "offset" ini ve üçüncü parametresi de konumlandırma orijinini almaktadır. Üçücncü parametre tamamen "fseek" fonksiyonundaki
+        gibidir ve şu değerlerden birini alabilir:
+
+            #define SEEK_SET		0
+            #define SEEK_CUR		1
+            #define SEEK_SEND		2
+
+        Fonksiyon başarı durumunda dosya göstericisinin dosyanın başından itibaren "offset" değerine, başarısızlık durumunda "-1" değerine geri
+        dönmektedir. "off_t" türü "<unistd.h>" ve "<sys/types.h>" içerisinde "işaretli bir tamsayı belirtmek koşuluyla" "typedef" edilmi olan bir
+        türdür. "lseek" fonksiyonun başarısı da çoğu kez programsılar tarafındna kontrol edilmemektedir. 
+
+
+> Hatırlatıcı Notlar:
+    >> UNIX/Linux Sistemlerinde Dizinlerin "x" Hakları: UNIX/Linux sistemlerinde dizinler için "x" hakkı farklı bir anlama gelmektedir. Dizinler için "x" hakkı yol ifadelerinde "içinden geçilebilirlik"
+	anlamına gelmektedir. Örneğin "/home/kaan/Study/SysProg/test.txt" biçiminde bir yol ifadesi söz konusu olsun. İşletim sistemi bir yol ifadesinde hedeflenen dizin girişine önceki dizin girişlerinden geçerek
+    erişmektedir. Bu sürece İngilizce "pathname resolution" ya da "pathname lookup" denilmektedir. Pathname resolution işlemi sırasında prosesin yol ifadesindeki tüm dizinler için "x" hakkına sahip olması 
+	gerekmektedir. Örneğin yukarıdaki yol ifadesinin çözülebilmesi için prosesin kök dizine, "home" dizinine "kaan" dizinine, "study" dizinine, SysProg dizinine "x" hakkına sahip olması gerekmektedir. Benzer biçimde
+    "test.txt" biçiminde göreli bir yol ifadesi için de yine prosesin prosesin çalışma dizinine "x" hakkına sahip olması gerekmektedir. Dizinler için "x" hakkını kaldırırsak artık onun ötesine geçilemez. 
+	Bir yol ifadesinde hedef dosyanın içinde bulunduğu dizilere ve önceki dizinlere prosesin "r" hakkının olması gerekmemektedir. Önemli olan hedefteki dosyaya erişim hakkıdır. Örneğin, 
+    "/home/kaan/Study/SysProg/test.txt" biçiminde bir yol ifadesi olsun. Bizim bu dosyayı O_RDONLY modunda açabilmemiz için bu dosyaya "r" hakkına sahip olmamız gerekir. Buradaki dizinler için "r" hakkına sahip
+    olmamız gerekmez. Ancak buradaki diziler için "x" hakkına sahip olmamız gerekir. Yani "pathname resolution" işlemi bir okuma anlamına gelmemektedir. Diğer yandan komut satırındaki mkdir komutu zaten default olarak
+    yaratılan dizinde herkese "x" hakkını vermektedir. mkdir POSIX fonksiyonunda bizim fonksiyonun ikinci parametresinde bu hakları vermemiz gerekir. 
+
+    >> UNIX/Linux dünyasında kullanılan dosya sistemleri ve Microsoft'un "NTFS" dosya sistemi "dosya deliği (file hole)" denilen bir özelliğe
+    sahiptir. Bu sistemlerde dosya göstericisi "EOF" ötesine konumlandırılıp "WriteFile/write" fonksiyonu ile yazma yapılırsa aradaki bölgeye
+    "delik (hole)" denilmektedir. Dosya delikleri gerçek anlamda diskte tahsis edilemzler ve dosya deliklerinden okuma yapıldığında "0" "byte"
+    ları okunur.
+        * Örnek 1, Aşağıda dosya deliği oluşturma bir örnek verilmiştir. Program çalıştırıldıktan sonra dosyanın uzunluğu ve dosyanın diskte
+        kapladığı alan aşağıdaki gibidir:
+
+            $ls -l test.txt
+            -rw-r--r-- 1 kaan study 5000001 Tem 22 20:07 test.txt
+            $du test.txt
+            8	test.txt
+
+    Burada dosyanın uzunluğu "5000001" byte gözüktüğü halde diskte kapladığı alan 8 * 1024 = 8192 "byte" tır. Aşağıda çalıştırılan programın
+    kodu verilmiştir: 
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+        #include <fcntl.h>
+        #include <unistd.h>
+
+        void exit_sys(const char *msg);
+
+        int main(void)
+        {
+            int fd;
+
+            if ((fd = open("test.txt", O_WRONLY)) == -1)
+                exit_sys("open");
+
+            if (lseek(fd, 5000000, SEEK_SET) == -1)
+                exit_sys("open");
+
+            if (write(fd, "x", 1) == -1)
+                exit_sys("write");
+
+            close(fd);
+
+            return 0;
+        }
+
+        void exit_sys(const char *msg)
+        {
+            perror(msg);
+
+            exit(EXIT_FAILURE);
+        }
+
+    >> "Text-mode" ve "binary-mode" kavramları işletim sistemlerine özgü kavramlar değildir. İşletim sistemlerinin sistem fonksiyonları dosyaları 
+	"byte" toplulukları olarak görür. Dosyanın "text" dosya mı "binary" dosya mı olduğu işletim sisteminin çekirdeğini ilgilendirmemektedir. Bunlar
+	yüksek seviyeli kavramlardır. 
+
+    >> UNIX/Linux sistemlerinde geleneksel olarak her kullanıcı için "/home" dizininin altında bir dizin bulundurulmaktadır. UNIX/Linux sistemlerinde
+    bir grup kullanıcının oluşturduğu topluluğa "grup (group)" denilmektedir. Grup bilgileri "/etc/group" dosyasında saklanmaktadır. Bu sistemlerde
+    "/etc" dizini sistem ile ilgili çeşitli konfigürasyon bilgilerinin tutulduğu ana bir dizindir. Linux sistemleri kurulurken zaten kurulum
+    programları aynı zamanda bir kullanıcı da oluşturmaktadır. Ancak daha sonra başka kullanıcılar da oluşturulabilir. Bu işlemler "adduser" ya da
+    "useradd" komutlarıyla yapılabieceği gibi manuel olarak "/etc/passwd" dosyasına satır ekleyerek de yapılabilmektedir.
+
+    >> Çeşitli uzantılara sahip dosyaların önceden belirlenmiş bir formatı vardır. Buna "dosya formatı (file format)" denilmektedir. Dosya formatları bazen standardizasyon kurumları tarafından çoğu zaman ise
+    şirketler ve kurumlar tarafından oluşturulmaktadır. Dünyada çeşitli konulara ilişkin yüzlerce dosya formatı bulunmaktadır. Bir dosya formatını anlayabilmek için o konu hakkında bilgiye sahip olmamız gerekir.
+    Hiç Autocad kullanmamış birisi Autocad dosya formatını anlayamaz. Dosya formatlarının başında hemen her zaman bir "başlık kısmı (header)" bulunmaktadır. Dosyaya ilişkin kritik "meta-data" bilgileri bu 
+	başlık kısmında tutulmaktadır. Genellikle dosya formatlarının ilk birkaç byte'ı "magic number" denilen özel bazı değerler içermektedir. Bunun nedeni o dosya formatını okuyup anlamlandıracak programların
+    dosyanın doğru formatta olup olmadığını kabaca (ama kesin değil) test etmesini sağlamaktır. İşte derleyicilerin ürettikleri "amaç dosyaların (object files)" ve bağlayıcıların ürettikleri "çalıştırılabilir
+    dosyaların (executable files)" da belli formatları vardır. Tabii bu dosya formatlarını anlayabilmek için yine aşağı seviyeli pek çok kavramın bilinmesi gerekmektedir. Microsoft'un kullandığı amaç dosya
+    formatına "COFF (Common Object File Format)" denilmektedir. Microsoft daha önce DOS zamanlarında "OMF (Object Module Format)" basit bir format kullanıyodu. Microsoft'un bugün Windows sistemlerinde kullandığı
+    "çalıştırılabilir (executable)" dosya formatına "PE (Portable Executable)" dosya formatı denilmektedir. COFF formatı ile PE formatı birbirine çok benzerdir. Bugün Linux sistemleri ve diğer UNIX türevi
+    sistemler amaç dosya formatı olarak ve çalıştırılabilir dosya formatı olarak "ELF (Executable and Linkable Format)" denilen formatı kullanmaktadır. ELF hem bir amaç dosya formatı hem de çalıştırılabilir dosya
+    formatıdır. Uzun süredir macOS sistemlri Mach-O isimli bir amaç dosya ve çalıştırılabilir dosya formatı kullanmaktadır. 
+
+>> UNIX/Linux sistemlerinde dosya kopyalamaya bir örnek. 
+        * Örnek 1, "./mycp [-i -n][--interactive --no-clobber] <source path> <destination path>". Bir dosyanın olup olmadığını anlamak için ve
+        ilgili prosesin dosyaya okuma/yazma/çalıştırma işlemini yapıp yapamayacağını anlayabilmek için "access" isimli bir POSIX fonksiyonu
+        kullanılmaktadır. Bu fonksiyon "open" ile dosyayı açmaktan daha etkin bu işlemi yapabilmektedir.
+            #include <stdio.h>
+            #include <stdlib.h>
+            #include <ctype.h>
+            #include <fcntl.h>
+            #include <sys/stat.h>
+            #include <unistd.h>
+            #include <getopt.h>
+
+            #define BUF_SIZE    8192
+
+            void exit_sys(const char *msg);
+
+            int main(int argc, char *argv[])
+            {
+                int result;
+                int i_flag, n_flag;
+                int err_flag;
+                char buf[BUF_SIZE];
+                int fds, fdd;
+                ssize_t n;
+
+                struct option options[] = {
+                    {"interactive", no_argument, NULL, 'i'},
+                    {"no-clobber", required_argument, NULL, 'n'},
+                    {0, 0, 0, 0 },
+                };
+
+                opterr = 0;
+
+                i_flag = n_flag = 0;
+                err_flag = 0;
+
+                while ((result = getopt_long(argc, argv, "in", options, NULL)) != -1) {
+                    switch (result) {
+                    case 'i':
+                        i_flag = 1;
+                        break;
+                    case 'n':
+                        n_flag = 1;
+                        break;
+                    case '?':
+                        if (optopt != 0)
+                            fprintf(stderr, "invalid option: -%c\n", optopt);
+                        else
+                            fprintf(stderr, "invalid long option!..\n");
+
+                        err_flag = 1;
+
+                        break;
+                    }
+                }
+
+                if (err_flag)
+                    exit(EXIT_FAILURE);
+
+                if (argc - optind != 2) {
+                    fprintf(stderr, "wrong number of arguments!..\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                if (n_flag || i_flag) {
+                    if (access(argv[optind + 1], F_OK) == 0) {
+                        if (n_flag) {
+                            fprintf(stderr, "file already exits! (-n specified)\n");
+                            exit(EXIT_FAILURE);
+                        }
+                        if (i_flag) {
+                            printf("file already exists! Overwrite? (Y/N):");
+                            if (tolower(getchar()) != 'y')
+                                exit(EXIT_FAILURE);
+                        }
+                    }
+                }
+
+                if ((fds = open(argv[optind], O_RDONLY)) == -1)
+                    exit_sys("open");
+
+                if ((fdd = open(argv[optind + 1], O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) == -1)
+                    exit_sys("open");
+
+                while ((n = read(fds, buf, BUF_SIZE)) > 0)
+                    if (write(fdd, buf, n) == -1)
+                        exit_sys("write");
+
+                if (n == -1)
+                    exit_sys("read");
+
+                close(fds);
+                close(fdd);
+
+                return 0;
+            }
+
+            void exit_sys(const char *msg)
+            {
+                perror(msg);
+
+                exit(EXIT_FAILURE);
+            }
+
+    >> Windows sistemlerinde aslında bir kullanıcının oluşturduğu dosyaya erişim pekala kısıtlanabilmektedir. Ancak Windows sistemlerindeki
+    karmaşık güvenlik mekanizmasından dolayı, bu konunun detaylarınd Windows Sistem Programlama kursunda değinilecektir.
