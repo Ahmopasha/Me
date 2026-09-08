@@ -1,48 +1,66 @@
-<!-- It is 01.06.2022. This page is being created while learning Web Development. -->
-
 <!DOCTYPE html>
 <html lang="en">
-
-    <head>
-        <meta charset="UTF-8">
-        <meta name="description" content="Welcome to my world!">
-        <title>@Me</title>
-    </head>
-
-    <body>
-        <img src="https://unavatar.io/github/ahmopasha" alt="Profil_Resmim" style="width:150px; border-radius:50%;">
-        <h1>Ahmet Kandemir PEHLIVANLI</h1>
-        <em>Shift Supervisor in Istanbul Airport</em>
-        <address>Istanbul</address>
-        <address>ahmet.pehlivanli@yahoo.com</address>
-
-        <hr><br>
-        Welcome aboard! <br> 
-        This is my web page where you can find information about me ^^. <br>
-        Have fun.. <br>
-        <br><hr>
-
-        <p><h2><strong>Tablo of Contents:</strong></h2></p>
-        <ul>
-            <!--
-                <li>
-                    <a href="CV/CV.html">CV</a>
-                </li>
-            -->
-            <li>
-                <a href="Projects/Projects.html">Projects</a>
-            </li>
-
-            <li>
-                <a href="MyLibrary/My Library.html">My Library</a>
-            </li>
-
-            <li>
-                <a href="Contact/Contact.html">Contact</a>
-            </li>
-        </ul>    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ahmet Kandemir Pehlivanlı | Systems Engineer</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
         
-        <br><hr>
+        <!-- 1. Satır: Eyebrow -->
+        <div class="content-block">
+            <p class="eyebrow">BRIDGING THE DIVERSE DISCIPLINES OF MY LIFE</p>
+        </div>
 
-    </body>
+        <!-- 2. Satır: İsim -->
+        <div class="content-block">
+            <h1 class="name">Ahmet Kandemir Pehlivanlı</h1>
+        </div>
+
+        <!-- 3. Satır: Manifesto (İtalik Paragraf) -->
+        <div class="content-block">
+            <p class="manifesto">
+                ...always viewed engineering as a quest for harmony—a natural flow between the physical, the logical, and the living; overseeing the massive infrastructure of a global airport, ensuring that complex automation and electrical systems run flawlessly. Yet, my curiosity constantly draws me into the quiet precision of C++ and Linux programming, and the organic complexities of biomedical engineering, knowing that there is no rigid line between a heavy industrial control panel, a block of code, or an interactive world built in Unreal Engine. They are simply different tools to satisfy the same passion: blending hardware, elegant software, and human experience into one beautifully interconnected system.
+            </p>
+        </div>
+
+        <!-- 4. Satır: Aksiyon Butonları -->
+        <div class="content-block">
+            <div class="actions">
+                <a href="https://www.linkedin.com/in/thepehlivanli/" target="_blank" class="btn">LinkedIn</a>
+                <a href="https://github.com/Ahmopasha" target="_blank" class="btn">GitHub</a>
+            </div>
+        </div>
+
+        <!-- 5. Satır: Artifacts / Eserler Listesi (Logbook) -->
+        <div class="content-block">
+            <div class="archive-list">
+                
+                <!-- İçerik 1: Game Programming -->
+                <a href="https://ahmopasha.github.io/Me/Projects/LearningGameProgramming/LearningGameProgramming.html" target="_blank" class="archive-item">
+                    <span class="archive-date">06.2025</span>
+                    <span class="archive-title">deep diving in game programming</span>
+                </a>
+                
+                <!-- İçerik 2: My Library -->
+                <a href="https://ahmopasha.github.io/Me/MyLibrary/My%20Library.html" target="_blank" class="archive-item">
+                    <span class="archive-date">03.2026</span>
+                    <span class="archive-title">curated knowledge base of my bookshelf</span>
+                </a>
+
+                <!-- GELECEK REZERVASYONU: Yüksek Lisans Tezi (Şu an gizli) 
+                <a href="#" target="_blank" class="archive-item">
+                    <span class="archive-date">202X</span>
+                    <span class="archive-title">[WIP] M.Sc. Biomedical Engineering Thesis</span>
+                </a>
+                -->
+
+            </div>
+        </div>
+
+    </div>
+</body>
 </html>
