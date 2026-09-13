@@ -1,113 +1,97 @@
-<!-- It is 01.06.2022. This page is being created while learning Web Development. -->
-
 <!DOCTYPE html>
 <html lang="en">
-
-    <head>
-        <meta charset="UTF-8">
-        <meta name="description" content="Welcome to my world!">
-        <title>Learning Game Programming @Me</title>
-    </head>
-
-    <body>
-        <img src="https://unavatar.io/github/ahmopasha" alt="Profil_Resmim" style="width:150px; border-radius:50%;">
-        <h1>Ahmet Kandemir PEHLIVANLI</h1>
-        <em>Shift Supervisor in Istanbul Airport</em>
-        <address>Istanbul</address>
-        <address>ahmet.pehlivanli@yahoo.com</address>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Programming Logs | Ahmet Kandemir Pehlivanlı</title>
+    <!-- Ana sayfanın iskeletini ve bu sayfaya özel oyun temasını çağırıyoruz -->
+    <link rel="stylesheet" href="../../style.css"> 
+    <link rel="stylesheet" href="gaming-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="gaming-room-bg">
+    
+    <div class="container">
         
-        <hr>
-
-        <p><h2><strong>Learning Purpose Games</strong></h2></p>
-        I have created following games while following tutorials published on online platforms and uploaded them to my Google Drive.
-        <br>
-        In the following table, more information can be found about them. 
-        <br><br>
-        
-        <table>       
-            <tr>
-                <th>Last Update Date</th>
-                <th>Project Name</th>
-                <th>Project Details</th>
-            </tr>    
+        <!-- CRT EKRAN EFEKTLİ İÇERİK KUTUSU -->
+        <div class="content-block crt-screen">
+            <p class="eyebrow">LEVEL 1: DEEP DIVING IN GAME PROGRAMMING</p>
+            <h1 class="name">Game Engine Architecture</h1>
             
-            <tr>
-                <td>06.2025</td>
-                <td><a href="./Navras Akademi/Navras Akademi Unreal Engine Kursu.html">Navras Academy</a></td>
-                <td>
-                    Unreal Engine course given by Navras Academy. <br>
-                </td>
-            </tr> 
+            <p class="manifesto">
+                [WIP] Unreal Engine mekanikleri, C++ ile fizik motoru etkileşimleri ve oyun mimarisi üzerine aldığım kişisel notlar, loglar ve sistem tasarımları...
+            </p>
 
-            <tr>
-                <td>01.2025</td>
-                <td><a href="./Game Developer Course III/12. Game Developer Course III.html">Game Developer Course III</a></td>
-                <td>
-                    After a long time break, I pick up this course as a fresh reminder. <br>
-                    This course focus on purely blueprints. <br>
-                    The lecturer was the same one with the previous courses. <br> 
-                </td>
-            </tr> 
+            <!-- ROMEN RAKAMLI PROJE SEÇİM EKRANI -->
+            <div class="inventory-grid">
+                
+                <!-- Proje 6 (En Güncel) -->
+                <a href="./Navras Akademi/Navras Akademi Unreal Engine Kursu.html" class="inventory-slot">
+                    <div class="slot-icon" style="background-image: url('icons/icon6.png');"></div>
+                    <div class="slot-tooltip">
+                        <span class="tooltip-desc">Unreal Engine course given by Navras Academy.</span>
+                    </div>
+                </a>
+                
+                <!-- Proje 5 -->
+                <a href="./Game Developer Course III/12. Game Developer Course III.html" class="inventory-slot">
+                    <div class="slot-icon" style="background-image: url('icons/icon5.png');"></div>
+                    <div class="slot-tooltip">
+                        <span class="tooltip-desc">After a long time break, I pick up this course as a fresh reminder.<br>This course focus on purely blueprints.<br>The lecturer was the same one with the previous courses.</span>
+                    </div>
+                </a>
 
-            <tr>
-                <td>04.2024</td>
-                <td><a href="./A Gameplay Ability System Course/11. A Gameplay Ability System Course.html">A Gameplay Ability System Course</a></td>
-                <td>
-                    After completing Game Developer Course II, I started following this tutorial. <br>
-                    This course was an immersive course, teaching the Gameplay Ability System in Unreal Engine. <br>
-                    The lecturer was the same one with the previous courses. <br> 
-                </td>
-            </tr> 
+                <!-- Proje 4 -->
+                <a href="./A Gameplay Ability System Course/11. A Gameplay Ability System Course.html" class="inventory-slot">
+                    <div class="slot-icon" style="background-image: url('icons/icon4.png');"></div>
+                    <div class="slot-tooltip">
+                        <span class="tooltip-desc">After completing Game Developer Course II, I started following this tutorial.<br>This course was an immersive course, teaching the Gameplay Ability System in Unreal Engine.</span>
+                    </div>
+                </a>
 
-            <tr>
-                <td>01.2024</td>
-                <td><a href="./Game Developer Course II/10. Game Developer Course II.html">Game Developer Course II</a></td>
-                <td>
-                    After completing A Shooter Course, I started following this tutorial. <br>
-                    This course was an updated version of Game Developer Course I. <br>
-                    The lecturer was the same one with the previous courses. <br> 
-                </td>
-            </tr> 
+                <!-- Proje 3 -->
+                <a href="./Game Developer Course II/10. Game Developer Course II.html" class="inventory-slot">
+                    <div class="slot-icon" style="background-image: url('icons/icon3.png');"></div>
+                    <div class="slot-tooltip">
+                        <span class="tooltip-desc">After completing A Shooter Course, I started following this tutorial.<br>This course was an updated version of Game Developer Course I.</span>
+                    </div>
+                </a>
 
-            <tr>
-                <td>01.2024</td>
-                <td><a href="./A Shooter Course/9. A Shooter Course.html">A Shooter Course</a></td>
-                <td>
-                    After completing Game Developer Course I, I started this course which thought me a lot of things. <br>
-                    The lecturer was the same one with the Game Developer Course I. <br>
-                    In this course, UE5 is also used as well. <br>  
-                </td>
-            </tr> 
+                <!-- Proje 2 -->
+                <a href="./A Shooter Course/9. A Shooter Course.html" class="inventory-slot">
+                    <div class="slot-icon" style="background-image: url('icons/icon2.png');"></div>
+                    <div class="slot-tooltip">
+                        <span class="tooltip-desc">After completing Game Developer Course I, I started this course which thought me a lot of things.<br>In this course, UE5 is also used as well.</span>
+                    </div>
+                </a>
 
-            <tr>
-                <td>01.2024</td>
-                <td><a href="./Game Developer Course I/8. Game Developer Course I.html">Game Developer Course I</a></td>
-                <td>
-                    Game Developer Course I was the very first game that I made while following a tutorial, seriously. <br>
-                    I started entering the world of Unreal Engine and game programming thanks to this game. <br>
-                    The course thought with UE4, I followed with UE5.
-                </td>
-            </tr>
+                <!-- Proje 1 (İlk Oyun) -->
+                <a href="./Game Developer Course I/8. Game Developer Course I.html" class="inventory-slot">
+                    <div class="slot-icon" style="background-image: url('icons/icon1.png');"></div>
+                    <div class="slot-tooltip">
+                        <span class="tooltip-desc">Game Developer Course I was the very first game that I made while following a tutorial, seriously.<br>The course thought with UE4, I followed with UE5.</span>
+                    </div>
+                </a>
 
-            <tr>
-                <td>11.2023</td>
-                <td>
-                    <a href="./Others/Others.html">Others</a>
-                </td>
-                <td>
-                    [WIP] : Other learning-purpose games. 
-                </td>
-            </tr>
+            </div>
 
-        </table>
+            <!-- ALT NAVİGASYON (Çerçeve İçi) -->
+            <div class="arcade-nav-bottom">
+                <!-- Sol Alt Köşe: Prev Level (Doğrudan ana sayfaya bağlandı) -->
+                <a href="../../index.html" class="pixel-btn">
+                    <span class="pixel-icon">◀</span> 
+                    <span class="btn-text">PREV_LEVEL</span>
+                </a>
+                
+                <!-- Sağ Alt Köşe: Base Camp -->
+                <a href="../../index.html" class="pixel-btn highlight">
+                    <span class="btn-text">BASE_CAMP</span>
+                    <span class="pixel-icon">🏠</span> 
+                </a>
+            </div>
 
-        <br>
-        
-        <hr>
-        <a href="../Projects.html">Back to the Previous Page.</a> 
-        <br>
-        <a href="../../index.html">Back to the Homepage.</a>
-        <hr>
-        
-    </body>
+        </div> <!-- CRT Ekran Bitişi -->
+
+    </div> <!-- Container Bitişi -->
+</body>
 </html>

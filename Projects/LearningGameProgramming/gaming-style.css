@@ -1,0 +1,157 @@
+/* ARKA PLAN: OYUNCU ODASI & PİXEL-ART ENTEGRASYONU */
+.gaming-room-bg {
+    background-image: 
+        linear-gradient(rgba(13, 17, 23, 0.92), rgba(13, 17, 23, 0.95)),
+        linear-gradient(transparent 1px, transparent 1px),
+        linear-gradient(90deg, transparent 1px, transparent 1px),
+        linear-gradient(rgba(212, 175, 55, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(212, 175, 55, 0.05) 1px, transparent 1px);
+    background-size: 100%, 100%, 100%, 20px 20px, 20px 20px;
+    background-attachment: fixed;
+}
+
+/* CRT EKRAN (Tüplü Monitör Hissiyatı) */
+.crt-screen {
+    background-color: rgba(22, 27, 34, 0.85); 
+    border: 1px solid var(--accent-color);
+    border-radius: 8px;
+    padding: 3rem;
+    box-shadow: 
+        inset 0 0 30px rgba(0, 0, 0, 0.8), 
+        0 0 15px rgba(212, 175, 55, 0.1); 
+    backdrop-filter: blur(5px);
+}
+
+/* RPG ENVANTER SİSTEMİ YERLEŞİMİ */
+.inventory-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2.5rem;
+    margin-top: 4rem;
+    padding-bottom: 2rem; 
+}
+
+.inventory-slot {
+    position: relative;
+    text-decoration: none;
+    outline: none;
+}
+
+/* GÖRSEL İKON YUVASI (Resim Dosyaları İçin) */
+.slot-icon {
+    width: 75px;
+    height: 75px;
+    background-color: var(--bg-color); /* #000000 yerine ana sayfanın antrasit rengi geldi */
+    
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    border: 2px solid var(--accent-color); 
+    border-radius: 8px; 
+    transition: all 0.2s ease;
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
+}
+
+/* Fare Üzerine Geldiğinde (Resim Parlaması) */
+.inventory-slot:hover .slot-icon {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.7), inset 0 0 10px rgba(212, 175, 55, 0.2);
+    border-color: #fff; /* Üzerine gelince çerçevenin hafif beyazlaması retro bir etki yaratır */
+}
+
+/* SADELEŞTİRİLMİŞ BİLGİ KUTUCUĞU (Tooltip) */
+.slot-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    width: 280px;
+    background-color: rgba(13, 17, 23, 0.95);
+    border: 1px solid var(--accent-color);
+    border-radius: 6px;
+    padding: 1.2rem;
+    text-align: center; 
+    
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 50;
+    pointer-events: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.9);
+}
+
+.slot-tooltip::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px;
+    border-style: solid;
+    border-color: transparent transparent var(--accent-color) transparent;
+}
+
+.inventory-slot:hover .slot-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(20px);
+}
+
+/* Açıklama Tipografisi */
+.tooltip-desc {
+    display: block;
+    color: var(--text-primary); 
+    font-family: var(--code-font); 
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+/* ALT NAVİGASYON (Çerçeve İçi Butonlar) */
+.arcade-nav-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4rem; 
+    padding-top: 2rem;
+    border-top: 1px dashed rgba(212, 175, 55, 0.3); 
+}
+
+/* Retro Buton Stilleri */
+.pixel-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: transparent;
+    color: var(--text-secondary);
+    font-family: var(--code-font); 
+    font-size: 0.85rem;
+    text-decoration: none;
+    border: 1px solid #30363d;
+    padding: 0.5rem 1rem;
+    text-transform: uppercase;
+    box-shadow: 2px 2px 0px rgba(0,0,0,0.5); 
+    transition: all 0.1s ease; 
+}
+
+.pixel-btn:hover {
+    color: var(--bg-color);
+    background-color: var(--text-secondary);
+    transform: translate(2px, 2px); 
+    box-shadow: 0px 0px 0px transparent;
+}
+
+.pixel-btn.highlight {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.pixel-btn.highlight:hover {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+}
+
+.pixel-icon {
+    font-size: 1rem;
+}
