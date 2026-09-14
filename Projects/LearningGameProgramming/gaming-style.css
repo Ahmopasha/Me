@@ -155,3 +155,211 @@
 .pixel-icon {
     font-size: 1rem;
 }
+
+/* METİN İÇİ LİNKLER (Görev özeti kısmındaki linkler için) */
+.text-link {
+    color: var(--accent-color);
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    text-underline-offset: 4px;
+    transition: all 0.2s ease;
+}
+
+.text-link:hover {
+    color: var(--text-primary);
+    text-decoration-style: solid;
+}
+
+/* DATA MODULE CARDS (Alt Bölüm Seçim Ekranları) */
+.data-module-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 3rem;
+}
+
+.data-card {
+    display: block;
+    text-decoration: none;
+    background-color: rgba(0, 0, 0, 0.6);
+    border: 1px solid #30363d;
+    border-left: 4px solid var(--accent-color);
+    padding: 1.8rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+
+.data-card:hover {
+    background-color: rgba(212, 175, 55, 0.05);
+    border-color: rgba(212, 175, 55, 0.3);
+    border-left: 4px solid var(--accent-color);
+    transform: translateX(10px); /* Fareyle üzerine gelince kart hiyerarşik olarak sağa kayar */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.data-card-header {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--code-font);
+    font-size: 0.8rem;
+    margin-bottom: 1.2rem;
+    border-bottom: 1px dashed rgba(212, 175, 55, 0.3);
+    padding-bottom: 0.5rem;
+}
+
+.card-id {
+    color: var(--accent-color);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.card-status {
+    color: var(--text-secondary);
+}
+
+.card-title {
+    color: var(--text-primary);
+    font-family: var(--code-font);
+    font-size: 1.3rem;
+    margin: 0 0 0.8rem 0;
+    transition: color 0.2s ease;
+}
+
+.data-card:hover .card-title {
+    color: var(--accent-color);
+}
+
+.card-desc {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin: 0;
+    font-family: var(--main-font);
+}
+
+/* GÖREV SİSTEM LOGU (Timeline Yapısı) */
+.mission-log {
+    margin-top: 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3rem; /* Haftalar arası boşluk */
+}
+
+.log-entry {
+    border-left: 2px dashed rgba(212, 175, 55, 0.3);
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+/* Timeline Noktası */
+.log-entry::before {
+    content: "";
+    position: absolute;
+    left: -6px;
+    top: 0;
+    width: 10px;
+    height: 10px;
+    background-color: var(--bg-color);
+    border: 2px solid var(--accent-color);
+    border-radius: 50%;
+}
+
+.log-meta {
+    font-family: var(--code-font);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 0.8rem;
+    letter-spacing: 1px;
+}
+
+.log-desc {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+/* MEDYA ÇERÇEVELERİ (Resim ve Videolar) */
+.log-media {
+    margin-bottom: 1.5rem;
+}
+
+.log-media.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.media-frame {
+    background-color: #000;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 0.3rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    transition: border-color 0.3s ease;
+}
+
+.media-frame:hover {
+    border-color: var(--accent-color);
+}
+
+.media-frame img, .media-frame iframe {
+    width: 100%;
+    border-radius: 2px;
+    display: block;
+}
+
+/* Videoları (iframe) 16:9 oranında tutmak için zorunlu ayar */
+.media-frame iframe {
+    aspect-ratio: 16 / 9;
+    height: auto;
+    border: none;
+}
+
+/* ÖĞRENİM ÇIKTILARI (Terminal Listesi) */
+.log-outcomes {
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    padding: 1rem 1.5rem;
+    border-radius: 4px;
+}
+
+.outcome-title {
+    font-family: var(--code-font);
+    color: var(--accent-color);
+    font-size: 0.85rem;
+    display: block;
+    margin-bottom: 0.8rem;
+}
+
+.log-outcomes ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.log-outcomes ul li {
+    position: relative;
+    padding-left: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* Standart yuvarlak madde imi yerine terminal oku */
+.log-outcomes ul li::before {
+    content: ">";
+    position: absolute;
+    left: 0;
+    color: var(--accent-color);
+    font-family: var(--code-font);
+}
+
+/* Mobilde medya grid'ini alt alta dizer */
+@media (max-width: 768px) {
+    .log-media.grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+

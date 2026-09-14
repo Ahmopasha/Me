@@ -1,41 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 01: Game Developer Course I | Ahmet Kandemir Pehlivanlı</title>
+    <!-- Stil dosyalarının doğru yolları -->
+    <link rel="stylesheet" href="../../../style.css"> 
+    <link rel="stylesheet" href="../gaming-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="gaming-room-bg">
+    
+    <div class="container">
+        
+        <!-- CRT EKRAN KUTUSU -->
+        <div class="content-block crt-screen">
+            <p class="eyebrow">[MODULE_01] ARCHIVE DATA : GENESIS</p>
+            <h1 class="name">Game Developer Course I</h1>
+            
+            <p class="manifesto">
+                System logs covering the foundational concepts of game development in Unreal Engine. This represents the very first step into the architecture.
+                <br><br>
+                <i style="color: var(--text-secondary); font-size: 0.85rem;">*Note: This game architecture was not built to be released, but constructed solely for academic purposes alongside the course lecturer.</i>
+            </p>
 
-    <head>
-        <meta charset="UTF-8">
-        <meta name="description" content="Welcome to my world!">
-        <title>A Game Developer Course I @Me</title>
-    </head>
+            <!-- SİSTEM GÜNLÜĞÜ (TIMELINE) -->
+            <div class="mission-log">
 
-    <body>
-        <img src="https://unavatar.io/github/ahmopasha" alt="Profil_Resmim" style="width:150px; border-radius:50%;">
-        <h1>Ahmet Kandemir PEHLIVANLI</h1>
-        <em>Shift Supervisor in Istanbul Airport</em>
-        <address>Istanbul</address>
-        <address>ahmet.pehlivanli@yahoo.com</address>
-        
-        <hr>
-        Below, I leave a gameplay video related to the output product:
-        
-        <br><br>
-        <video width="320" height="240" controls muted>
-            <source src="Placeholder_Video.mp4" type="video/mp4">
-            PLACEHOLDER TEXT
-        </video>
-        <br><br> 
-        
-        <br>
-        <i>This game was not being made to be released, just being made together with the lecturer.</i>
-        <br><br>
-        Click <a href="https://drive.google.com/drive/folders/1IpVhsa91Ve_7NdHyTF8jj8989dD2UvYx?usp=drive_link" target="_blank">here</a>, to download the project files.
-        <br>
-        Click <a href="Ultimate Game Developer I.pdf" target="_blank">here</a>, to see the certification of compliance.
-        <br>
-        <hr>
-        <a href="../../LearningGameProgramming/LearningGameProgramming.html">Back to the Previous Page.</a>
-        <br>
-        <a href="../../../index.html">Back to the Homepage.</a>
-        <hr>
-        
-    </body>
+                <!-- OYUN İÇİ VİDEO (MEKANİK TESTLERİ) -->
+                <div class="log-entry">
+                    <div class="log-meta">> LOG_DATE: INITIAL_TESTS</div>
+                    <div class="log-desc">Recorded gameplay video showcasing the first output product and core mechanics.</div>
+                    
+                    <div class="log-media">
+                        <div class="media-frame">
+                            <video controls muted style="width: 100%; border-radius: 2px; display: block; aspect-ratio: 16/9; background-color: #000;">
+                                <source src="Placeholder_Video.mp4" type="video/mp4">
+                                [SYSTEM_ERROR: Video playback not supported by current browser.]
+                            </video>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DOSYALAR & SERTİFİKA / BİTİŞ -->
+                <div class="log-entry" style="border-left-color: var(--accent-color);">
+                    <div class="log-meta" style="color: var(--accent-color);">> STATUS: COMPLETED</div>
+                    <div class="log-desc">
+                        Module successfully finished. Secure download link for source files:<br><br>
+                        
+                        <strong>DOWNLOAD REPOSITORY:</strong><br>
+                        > <a href="https://drive.google.com/drive/folders/1IpVhsa91Ve_7NdHyTF8jj8989dD2UvYx?usp=drive_link" target="_blank" class="text-link">Download Project Source Files</a><br><br>
+                        
+                        <strong>CERTIFICATION:</strong><br>
+                        > <a href="Ultimate Game Developer I.pdf" target="_blank" class="text-link">[VIEW_CERTIFICATE_FILE]</a>
+                    </div>
+                </div>
+
+            </div> <!-- MISSION LOG BİTİŞİ -->
+
+            <!-- ALT NAVİGASYON -->
+            <div class="arcade-nav-bottom">
+                <!-- Sol Alt Köşe: Prev Level (Game Programming ana sayfasına döner) -->
+                <a href="../LearningGameProgramming.html" class="pixel-btn">
+                    <span class="pixel-icon">◀</span> 
+                    <span class="btn-text">PREV_LEVEL</span>
+                </a>
+                
+                <!-- Sağ Alt Köşe: Base Camp -->
+                <a href="../../../index.html" class="pixel-btn highlight">
+                    <span class="btn-text">BASE_CAMP</span>
+                    <span class="pixel-icon">🏠</span> 
+                </a>
+            </div>
+
+        </div> 
+    </div> 
+</body>
 </html>

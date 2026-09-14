@@ -1,60 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-
-    <head>
-        <meta charset="UTF-8">
-        <meta name="description" content="Welcome to my world!">
-        <title>A Game Developer Course II @Me</title>
-    </head>
-
-    <body>
-        <img src="https://unavatar.io/github/ahmopasha" alt="Profil_Resmim" style="width:150px; border-radius:50%;">
-        <h1>Ahmet Kandemir PEHLIVANLI</h1>
-        <em>Shift Supervisor in Istanbul Airport</em>
-        <address>Istanbul</address>
-        <address>ahmet.pehlivanli@yahoo.com</address>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 03: Game Developer Course II | Ahmet Kandemir Pehlivanlı</title>
+    <!-- Stil dosyalarının doğru yolları -->
+    <link rel="stylesheet" href="../../../style.css"> 
+    <link rel="stylesheet" href="../gaming-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="gaming-room-bg">
+    
+    <div class="container">
         
-        <hr>   
-        In this project, I've started learning Gameplay Ability System in UE5 by following a tutorial which can be found <a href="https://www.udemy.com/course/unreal-engine-5-the-ultimate-game-developer-course/" target="_blank">here.</a>
-        The things that I learnt with this course are following ones : 
+        <!-- CRT EKRAN KUTUSU -->
+        <div class="content-block crt-screen">
+            <p class="eyebrow">[MODULE_03] ARCHIVE DATA</p>
+            <h1 class="name">Game Developer Course II</h1>
+            
+            <p class="manifesto">
+                System logs covering the continued exploration of Unreal Engine 5, including early implementations of the Gameplay Ability System. 
+                Official course documentation can be found <a href="https://www.udemy.com/course/unreal-engine-5-the-ultimate-game-developer-course/" target="_blank" class="text-link">here</a>.
+                <br><br>
+                <i style="color: var(--text-secondary); font-size: 0.85rem;">*Note: This architecture was built solely for academic purposes alongside the course lecturer.</i>
+            </p>
 
-        <ul>
-            <li>Level Design using World Partition</li>
-            <li>Game Design</li>
-            <li>Usage of AI in UE (An introduction)</li>
-            <li>Motion Warping</li>
-            <li>Fracture Mode for creating breakable objects</li>
+            <!-- SİSTEM GÜNLÜĞÜ (TIMELINE) -->
+            <div class="mission-log">
+                
+                <!-- ÖĞRENİM ÇIKTILARI (GİRİŞ) -->
+                <div class="log-entry">
+                    <div class="log-meta">> LOG_DATE: INITIALIZATION</div>
+                    <div class="log-outcomes">
+                        <span class="outcome-title">LEARNING OUTCOMES:</span>
+                        <ul>
+                            <li>Level Design using World Partition</li>
+                            <li>Game Design Principles</li>
+                            <li>Usage of AI in UE (An introduction)</li>
+                            <li>Motion Warping Implementation</li>
+                            <li>Fracture Mode for creating breakable objects</li>
+                        </ul>
+                    </div>
+                </div>
 
-        </ul>
-        
-        Below, you'll find some in-game footage:  
+                <!-- OYUN İÇİ GÖRSELLER (FOTOĞRAF ARŞİVİ) -->
+                <div class="log-entry">
+                    <div class="log-meta">> LOG_DATE: VISUAL_ARCHIVE</div>
+                    <div class="log-desc">Extracted in-game footage capturing environmental details and mechanics.</div>
+                    
+                    <div class="log-media">
+                        <div class="media-frame">
+                            <img src="./Ingame Shots/Part.jpg" alt="Game Developer Course II Gameplay">
+                        </div>
+                    </div>
+                </div>
 
-        <br><br>
+                <!-- OYUN İÇİ VİDEOLAR (MEKANİK TESTLERİ) -->
+                <div class="log-entry">
+                    <div class="log-meta">> LOG_DATE: MECHANIC_TESTS</div>
+                    <div class="log-desc">Recorded gameplay video showcasing the final product and system capabilities.</div>
+                    
+                    <div class="log-media">
+                        <div class="media-frame">
+                            <iframe src="https://www.youtube.com/embed/ADVB3iGzRAU" allowfullscreen></iframe>
+                        </div>
+                    </div>
+                </div>
 
-        <img src="./Ingame Shots/Part.jpg" style="width: 1280px;height: 960px;">
+                <!-- DOSYALAR & SERTİFİKA / BİTİŞ -->
+                <div class="log-entry" style="border-left-color: var(--accent-color);">
+                    <div class="log-meta" style="color: var(--accent-color);">> STATUS: COMPLETED</div>
+                    <div class="log-desc">
+                        Module successfully finished. Secure download link for source files:<br><br>
+                        
+                        <strong>DOWNLOAD REPOSITORY:</strong><br>
+                        > <a href="https://drive.google.com/drive/folders/1prKnOPQuj6t7wxEsZDKPSnhmqgENjC0l?usp=drive_link" target="_blank" class="text-link">Download Project Source Files</a><br><br>
+                        
+                        <strong>CERTIFICATION:</strong><br>
+                        > <a href="Ultimate Game Developer II.pdf" target="_blank" class="text-link">[VIEW_CERTIFICATE_FILE]</a>
+                    </div>
+                </div>
 
-        <br><br>
+            </div> <!-- MISSION LOG BİTİŞİ -->
 
-        Below, I've added a gameplay video showcasing the product: 
+            <!-- ALT NAVİGASYON -->
+            <div class="arcade-nav-bottom">
+                <!-- Sol Alt Köşe: Prev Level (Game Programming ana sayfasına döner) -->
+                <a href="../LearningGameProgramming.html" class="pixel-btn">
+                    <span class="pixel-icon">◀</span> 
+                    <span class="btn-text">PREV_LEVEL</span>
+                </a>
+                
+                <!-- Sağ Alt Köşe: Base Camp -->
+                <a href="../../../index.html" class="pixel-btn highlight">
+                    <span class="btn-text">BASE_CAMP</span>
+                    <span class="pixel-icon">🏠</span> 
+                </a>
+            </div>
 
-        <br><br>
-
-        <iframe width="640" height="480"
-        src="https://www.youtube.com/embed/ADVB3iGzRAU">
-        </iframe>
-
-        <br>
-        <i>This game was not being made to be released, just being made together with the lecturer.</i>
-        <br><br>
-        Click <a href="https://drive.google.com/drive/folders/1prKnOPQuj6t7wxEsZDKPSnhmqgENjC0l?usp=drive_link" target="_blank">here</a>, to download the project files.
-        <br>
-        Click <a href="Ultimate Game Developer II.pdf" target="_blank">here</a>, to see the certification of compliance.
-        <br>
-        <hr>
-        <a href="../../LearningGameProgramming/LearningGameProgramming.html">Back to the Previous Page.</a>
-        <br>
-        <a href="../../../index.html">Back to the Homepage.</a>
-        <hr>
-        
-    </body>
+        </div> 
+    </div> 
+</body>
 </html>

@@ -1,51 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
-
-    <head>
-        <meta charset="UTF-8">
-        <meta name="description" content="Welcome to my world!">
-        <title>Navras Academy @Me</title>
-    </head>
-
-    <body>
-        <img src="https://unavatar.io/github/ahmopasha" alt="Profil_Resmim" style="width:150px; border-radius:50%;">
-        <h1>Ahmet Kandemir PEHLIVANLI</h1>
-        <em>Shift Supervisor in Istanbul Airport</em>
-        <address>Istanbul</address>
-        <address>ahmet.pehlivanli@yahoo.com</address>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navras Academy | Mission Briefing</title>
+    <!-- CSS dosyalarını doğru klasör hiyerarşisinden çağırıyoruz -->
+    <link rel="stylesheet" href="../../../style.css"> 
+    <link rel="stylesheet" href="../gaming-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="gaming-room-bg">
+    
+    <div class="container">
         
-        <hr>
+        <!-- CRT EKRAN EFEKTLİ İÇERİK KUTUSU -->
+        <div class="content-block crt-screen">
+            <h1 class="name">Navras Academy <br> Unreal Engine Course</h1>
+            
+            <p class="manifesto">
+                This course covers design concepts and the detailed usage of blueprints in Unreal Engine. <br>
+                Official documentation and course details can be accessed <a href="https://www.navrasakademi.com/egitimler/unreal-engine-egitimi/" target="_blank" class="text-link">here</a>.
+            </p>
 
-        This course covers design concept and usage of blueprints in Unreal Engine. So, the table belows shows the links, respectively. 
-        <br>
-        More information about the course can be found <a href="https://www.navrasakademi.com/egitimler/unreal-engine-egitimi/" target="_blank">here</a>. 
+            <!-- İKİLİ VERİ MODÜLÜ (BÖLÜM SEÇİM KARTLARI) -->
+            <div class="data-module-container">
+                
+                <!-- Part I: Tasarım -->
+                <a href="./Navras Akademi Unreal Engine Kursu - Part I Tasarım.html" class="data-card">
+                    <div class="data-card-header">
+                        <span class="card-id">[MODULE_01]</span>
+                        <span class="card-status">STATUS: COMPLETED</span>
+                    </div>
+                    <h2 class="card-title">Environment & Level Design</h2>
+                    <p class="card-desc">Detailed logs, gameplay videos, and architectural screenshots focusing on <br> World Partition, level sculpting, and in-game lighting.</p>
+                </a>
 
-        <table style="text-align:left; table-layout:fixed;">
-            <tr>
-                <th style="width:30%;">Name</th>
-                <th style="width:70%;">Description</th>
-            </tr>
+                <!-- Part II: Blueprint -->
+                <a href="./Navras Akademi Unreal Engine Kursu - Part II Blueprint.html" class="data-card">
+                    <div class="data-card-header">
+                        <span class="card-id">[MODULE_02]</span>
+                        <span class="card-status">STATUS: COMPLETED</span>
+                    </div>
+                    <h2 class="card-title">Blueprint Engineering</h2>
+                    <p class="card-desc">Advanced mechanics documentation covering <br> Niagara Effects, Blueprint Interfaces, Event Dispatchers, and Character Movement.</p>
+                </a>
 
-            <tr>
-                <td>Part I</td>
-                <td>
-                    <a href="./Navras Akademi Unreal Engine Kursu - Part I Tasarım.html">Design concepts</a>.
-                </td> 
-            </tr>
+            </div>
 
-            <tr>
-                <td>Part II</td>
-                <td>
-                    <a href="./Navras Akademi Unreal Engine Kursu - Part II Blueprint.html">Usage of blueprints</a>.
-                </td>
-            </tr>
-        </table>
+            <!-- ALT NAVİGASYON -->
+            <div class="arcade-nav-bottom">
+                <!-- Sol Alt Köşe: Prev Level (Bir üst oyun menüsüne döner) -->
+                <a href="../LearningGameProgramming.html" class="pixel-btn">
+                    <span class="pixel-icon">◀</span> 
+                    <span class="btn-text">PREV_LEVEL</span>
+                </a>
+                
+                <!-- Sağ Alt Köşe: Base Camp (En başa, ana sayfaya döner) -->
+                <a href="../../../index.html" class="pixel-btn highlight">
+                    <span class="btn-text">BASE_CAMP</span>
+                    <span class="pixel-icon">🏠</span> 
+                </a>
+            </div>
 
-
-        <hr>
-        <a href="../../LearningGameProgramming/LearningGameProgramming.html">Back to the Previous Page.</a>
-        <br>
-        <a href="../../../index.html">Back to the Homepage.</a>
-        <hr>        
-    </body>
+        </div> 
+    </div> 
+</body>
 </html>
