@@ -1,62 +1,67 @@
-<!-- It is 01.06.2022. This page is being created while learning Web Development. -->
-
 <!DOCTYPE html>
 <html lang="en">
-
-    <head>
-        <meta charset="UTF-8">
-        <meta name="description" content="Welcome to my world!">
-        <title>@Me</title>
-    </head>
-
-    <body>
-        <img src="https://unavatar.io/github/ahmopasha" alt="Profil_Resmim" style="width:150px; border-radius:50%;">
-        <h1>Ahmet Kandemir PEHLIVANLI</h1>
-        <em>Shift Supervisor in Istanbul Airport</em>
-        <address>Istanbul</address>
-        <address>ahmet.pehlivanli@yahoo.com</address>
-
-        <hr>
-        This page is my library, where I share my book list and lecture notes.
-        <hr>
-
-        <p><h3><strong>List of Books</strong></h3></p>
-        <ul>
-            <li>
-                + Demir Ökçe by Jack London - Turkish 
-            </li>
-
-            <li>
-                + Martin Eden by Jack London - Turkish                 
-            </li>
-
-            <li>
-                > Deniz Kurdu by Jack London - Turkish                 
-            </li>
-        </ul>   
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@Me | Library</title>
+    <!-- CSS dosyalarını doğru klasör hiyerarşisinden çağırıyoruz -->
+    <link rel="stylesheet" href="../style.css"> 
+    <link rel="stylesheet" href="../LearningGameProgramming/gaming-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="gaming-room-bg">
+    
+    <div class="container">
         
-        <p><h3><strong>List of Lecture Notes</strong></h3></p>
-        <ul>
-            <li>
-                Cpp course notes of Necati Ergin in Turkish. Click <a href="./ProgrammingLectureNotes/CppCourse/TableOfContent.html">here</a>, for more information.  
-            </li>
+        <!-- CRT EKRAN EFEKTLİ İÇERİK KUTUSU -->
+        <div class="content-block crt-screen">
+            <h1 class="name">My Library</h1>
+            
+            <p class="manifesto">
+                This page is my library, where I share my book list and lecture notes.
+            </p>
 
-            <li>
-                Advanced Cpp course notes of Necati Ergin in Turkish. Click <a href="./ProgrammingLectureNotes/AdvancedCppCourse/TableOfContent.html">here</a>, for more information.                
-            </li>
-
-            <li>
-                Unix/Linux System Programming course notes of Kaan Aslan in Turkish. Click <a href="./ProgrammingLectureNotes/UnixLinuxSytemProgrammingCourse/TableOfContent.html">here</a>, for more information.
-            </li>
+            <!-- İKİLİ VERİ MODÜLÜ (BÖLÜM SEÇİM KARTLARI) -->
+            <div class="data-module-container">
                 
-            <li>
-                Advanced C and System Programming course notes of Kaan Aslan in Turkish. Click <a href="./ProgrammingLectureNotes/AdvancedCAndSystemProgrammingCourse/TableOfContent.html">here</a>, for more information.           
-            </li>
-        </ul>  
+                <!-- Meta-Module 01: List of Books -->
+                <a href="./ListOfBooks/index.html" class="data-card">
+                    <div class="data-card-header">
+                        <span class="card-id">[MODULE_01]</span>
+                        <span class="card-status">LITERATURE</span>
+                    </div>
+                    <h2 class="card-title">List of Books</h2>
+                    <p class="card-desc">My personal reading logs.</p>
+                </a>
 
-        <br><hr>
-        <a href="../index.html">Back to the Homepage.</a>
-        <hr>
+                <!-- Meta-Module 02: Programming Lecture Notes -->
+                <a href="./ProgrammingLectureNotes/index.html" class="data-card">
+                    <div class="data-card-header">
+                        <span class="card-id">[MODULE_02]</span>
+                        <span class="card-status">SYSTEM ARCHITECTURE</span>
+                    </div>
+                    <h2 class="card-title">Programming Lecture Notes</h2>
+                    <p class="card-desc">A comprehensive collection of course notes covering C++ and System Programming.</p>
+                </a>
 
-    </body>
+            </div>
+
+            <!-- ALT NAVİGASYON -->
+            <div class="arcade-nav-bottom">
+                <!-- Sol Alt Köşe: Prev Level (Bir üst oyun menüsüne döner) -->
+                <a href="../index.html" class="pixel-btn">
+                    <span class="pixel-icon">◀</span> 
+                    <span class="btn-text">PREV_LEVEL</span>
+                </a>
+                
+                <!-- Sağ Alt Köşe: Base Camp (En başa, ana sayfaya döner) -->
+                <a href="../index.html" class="pixel-btn highlight">
+                    <span class="btn-text">BASE_CAMP</span>
+                    <span class="pixel-icon">🏠</span> 
+                </a>
+            </div>
+
+        </div> 
+    </div> 
+</body>
 </html>

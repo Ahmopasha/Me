@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@Me | Literature Archive</title>
+    <!-- CSS dosyalarını doğru klasör hiyerarşisinden çağırıyoruz (Bir üst dizinden) -->
+    <link rel="stylesheet" href="../../style.css"> 
+    <link rel="stylesheet" href="../../LearningGameProgramming/gaming-style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="gaming-room-bg">
+    
+    <div class="container">
+        
+        <!-- CRT EKRAN EFEKTLİ İÇERİK KUTUSU -->
+        <div class="content-block crt-screen">
+            
+            <p class="eyebrow" style="margin-bottom: 0.5rem; text-align: left;">> DIR: LITERATURE_ARCHIVE</p>
+            <h1 class="name" style="text-align: left;">List of Books</h1>
+            
+            <p class="manifesto" style="text-align: left;">
+                My personal reading logs covering classic literature. Currently featuring works by Jack London.
+            </p>
+
+            <!-- KİTAP LİSTESİ (SİSTEM LOGU/TIMELINE TASARIMI) -->
+            <div class="mission-log" style="margin-top: 2.5rem; text-align: left;">
+                
+                <div class="log-entry">
+                    <div class="log-meta" style="color: var(--accent-color);">STATUS: [COMPLETED]</div>
+                    <h3 style="font-family: var(--code-font); font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.3rem;">Demir Ökçe</h3>
+                    <p class="log-desc">Author: Jack London <br> Language: Turkish</p>
+                </div>
+
+                <div class="log-entry">
+                    <div class="log-meta" style="color: var(--accent-color);">STATUS: [COMPLETED]</div>
+                    <h3 style="font-family: var(--code-font); font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.3rem;">Martin Eden</h3>
+                    <p class="log-desc">Author: Jack London <br> Language: Turkish</p>
+                </div>
+
+                <div class="log-entry">
+                    <div class="log-meta" style="color: var(--text-secondary);">STATUS: [IN_PROGRESS]</div>
+                    <h3 style="font-family: var(--code-font); font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.3rem;">Deniz Kurdu</h3>
+                    <p class="log-desc">Author: Jack London <br> Language: Turkish</p>
+                </div>
+
+            </div>
+
+            <!-- ALT NAVİGASYON -->
+            <div class="arcade-nav-bottom">
+                <!-- Sol Alt Köşe: Prev Level (Kütüphane Ana Sayfasına Döner) -->
+                <!-- Kütüphane HTML dosyanızın adı neyse href kısmını ona göre güncelleyin (örn: ../Library.html) -->
+                <a href="../../MyLibrary/My Library.html" class="pixel-btn">
+                    <span class="pixel-icon">◀</span> 
+                    <span class="btn-text">PREV_LEVEL</span>
+                </a>
+                
+                <!-- Sağ Alt Köşe: Base Camp (En başa, ana sayfaya döner) -->
+                <a href="../../index.html" class="pixel-btn highlight">
+                    <span class="btn-text">BASE_CAMP</span>
+                    <span class="pixel-icon">🏠</span> 
+                </a>
+            </div>
+
+        </div> 
+    </div> 
+</body>
+</html>
